@@ -35,7 +35,10 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
 
-    - name: Run E2E tests
+    - name: Run E2E tests (send flow)
+      run: npm run test:e2e -- --grep "Send Flow"
+
+    - name: Run full E2E suite
       run: npm run test:e2e
 
   merge-analytics:
@@ -44,18 +47,18 @@ jobs:
     needs: test
 
     steps:
-    - name: Send merge analytics
+    - name: Send merge analytics (issue-23)
       run: |
-        curl -X POST ${{ secrets.MERGE_ANALYTICS_URL }} \
+        curl -X POST "${{ secrets.MERGE_ANALYTICS_URL }}" \
           -H "Content-Type: application/json" \
           -d '{
-            "event": "enterprise_upgrade",
+            "event": "merge",
             "repository": "${{ github.repository }}",
             "branch": "${{ github.ref_name }}",
             "commit": "${{ github.sha }}",
             "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "author": "${{ github.actor }}",
-            "issue": 27,
+            "issue": 23,
             "status": "success",
             "coverage_verified": true
           }'

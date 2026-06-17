@@ -34,6 +34,41 @@ export interface Contact {
   name: string
   handle: string
   initials: string
+  address?: string
+}
+
+/** Describes the state of the contact picker in the send form */
+export interface ContactsState {
+  contacts: Contact[]
+  selected: Contact | null
+  query: string
+  loading: boolean
+}
+
+/** Payload passed to the send confirmation step */
+export interface SendConfirmation {
+  recipient: string
+  recipientLabel?: string
+  amount: number
+  asset: AssetCode
+  memo?: string
+  estimatedFee: number
+}
+
+/** Request body for /api/send */
+export interface SendRequest {
+  destination: string
+  amount: number
+  asset: AssetCode
+  memo?: string
+}
+
+/** Response from /api/send */
+export interface SendResponse {
+  success: boolean
+  hash?: string
+  status?: 'completed' | 'pending' | 'failed'
+  error?: string
 }
 
 export interface SavingsGoal {
