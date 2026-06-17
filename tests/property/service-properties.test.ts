@@ -1,35 +1,26 @@
 import fc from 'fast-check'
-import { AssetService } from '../../lib/services/asset.service'
+import { WalletService } from '../../lib/services/wallet.service'
+import { PricingService } from '../../lib/services/pricing.service'
 import { FiatService } from '../../lib/services/fiat.service'
-import { StellarService } from '../../lib/services/stellar.service'
+import { TEST_STELLAR_ADDRESS } from '../../lib/finance-data'
 
 describe('Service Interface Compliance Properties', () => {
-  const assetService = new AssetService()
+  const walletService = new WalletService()
+  const pricingService = new PricingService()
   const fiatService = new FiatService()
-  const stellarService = new StellarService()
 
-  // Property 1: Service Interface Compliance
-  it('Property 1: AssetService should handle all operations correctly', () => {
+  it('Property 1: PricingService should handle all operations correctly', () => {
     fc.assert(fc.property(
       fc.constantFrom('XLM', 'USDC', 'USDT'),
       fc.float({ min: 0.01, max: 10000 }),
       (assetCode, amount) => {
-        // Test that service implements interface correctly
-        const assets = assetService.getAssets()
+        const assets = pricingService.getAssets()
         expect(Array.isArray(assets)).toBe(true)
         expect(assets.length).toBeGreaterThan(0)
 
-        // Test formatting
-        const formatted = assetService.formatAsset(amount, assetCode)
+        const formatted = pricingService.formatAsset(amount, assetCode as any)
         expect(typeof formatted).toBe('string')
         expect(formatted).toContain(assetCode)
-
-        // Test conversion
-        if (assetCode === 'XLM') {
-          const converted = assetService.convertAsset(assetCode, 'USDC', amount)
-          expect(typeof converted).toBe('number')
-          expect(converted).toBeGreaterThan(0)
-        }
       }
     ), { numRuns: 100 })
   })
@@ -39,42 +30,34 @@ describe('Service Interface Compliance Properties', () => {
       fc.constantFrom('NGN', 'USD', 'GBP'),
       fc.float({ min: 0.01, max: 100000 }),
       (currency, amount) => {
-        // Test that service implements interface correctly
         const wallets = fiatService.getWallets()
         expect(Array.isArray(wallets)).toBe(true)
         expect(wallets.length).toBeGreaterThan(0)
 
-        // Test formatting
-        const formatted = fiatService.formatMoney(amount, currency)
+        const formatted = fiatService.formatMoney(amount, currency as any)
         expect(typeof formatted).toBe('string')
         expect(formatted.length).toBeGreaterThan(0)
 
-        // Test exchange rates
-        const rate = fiatService.getExchangeRate(currency, 'USD')
-        expect(typeof rate).toBe('number')
-        expect(rate).toBeGreaterThan(0)
+        const converted = fiatService.convertCurrency(currency as any, 'USD', amount)
+        expect(typeof converted).toBe('number')
+        expect(converted).toBeGreaterThan(0)
       }
     ), { numRuns: 100 })
   })
 
-  it('Property 1: StellarService should handle all operations correctly', () => {
+  it('Property 1: WalletService should handle all operations correctly', () => {
     fc.assert(fc.property(
-      fc.constantFrom('NGN', 'USD', 'GBP'),
       fc.string({ minLength: 56, maxLength: 56 }),
-      (currency, address) => {
-        // Test account info
-        const account = stellarService.getAccountInfo()
+      (address) => {
+        const account = walletService.getAccountInfo()
         expect(typeof account.publicKey).toBe('string')
         expect(account.publicKey.length).toBe(56)
 
-        // Test off-ramp methods
-        const methods = stellarService.getOffRampMethods()
-        expect(Array.isArray(methods)).toBe(true)
-
-        // Test key shortening
-        const shortened = stellarService.shortenKey(address)
+        const shortened = walletService.shortenKey(address)
         expect(typeof shortened).toBe('string')
         expect(shortened.includes('…')).toBe(true)
+
+        expect(walletService.validateAddress(TEST_STELLAR_ADDRESS)).toBe(true)
       }
     ), { numRuns: 100 })
   })

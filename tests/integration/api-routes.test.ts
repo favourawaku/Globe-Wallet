@@ -19,7 +19,12 @@ jest.mock('../../lib/services/container', () => ({
       getAssets: jest.fn().mockReturnValue([
         { code: 'XLM', name: 'Stellar Lumens', balance: 1000, priceUsd: 0.10 }
       ]),
-      getPrice: jest.fn().mockResolvedValue(0.10),
+      getPrice: jest.fn().mockImplementation((code: string) => {
+        if (code === 'INVALID') {
+          return Promise.reject(new Error('Asset INVALID not found'))
+        }
+        return Promise.resolve(0.10)
+      }),
       formatAsset: jest.fn(),
     },
     fiat: {
