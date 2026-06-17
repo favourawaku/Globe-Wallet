@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     const { from, to, amount } = await request.json()
     const converted = financeServices.fiat.convertCurrency(from, to, amount)
-    const rate = financeServices.fiat.getExchangeRate(from, to)
+    const rate = amount > 0 ? converted / amount : financeServices.fiat.convertCurrency(from, to, 1)
     
     return NextResponse.json({ 
       success: true, 

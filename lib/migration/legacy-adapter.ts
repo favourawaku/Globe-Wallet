@@ -42,7 +42,7 @@ export function convertCurrencies(
     return financeServices.fiat.convertCurrency(from, to, amount)
   } catch {
     // Fallback to simple USD conversion
-    const usdRates: Record<CurrencyCode, number> = { NGN: 1580.5, USD: 1, GBP: 0.79 }
+    const usdRates: Record<CurrencyCode, number> = { NGN: 1580.5, USD: 1, GBP: 0.79, EUR: 0.92 }
     const toUsd = amount / usdRates[from]
     return toUsd * usdRates[to]
   }

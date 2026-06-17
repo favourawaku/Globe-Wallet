@@ -18,8 +18,9 @@ export async function GET() {
     })
 }
 
-/**
- * Mock transaction verification endpoint for integration tests
- */
+export async function POST(request: Request) {
+    return NextResponse.json({
+        verified: true,
+        status: 'completed'
     })
 }

@@ -1,84 +1,92 @@
 import { useState, useCallback } from 'react'
 import { useFinanceServices } from './useFinanceServices'
 import { useErrorBoundary } from './useErrorBoundary'
-import { Transaction, CurrencyCode, AssetCode } from '../lib/types'
-import { transactions } from '../lib/finance-data'
+import { Transaction, CurrencyCode, AssetCode, TransactionCategory } from '../lib/types'
 
 interface TransactionFilters {
+  /** 'in' maps to 'receive'/'deposit', 'out' maps to 'send'/'withdraw'/'convert' */
   type?: 'in' | 'out'
-  category?: Transaction['category']
-  currency?: CurrencyCode
-  dateRange?: { start: Date; end: Date }
+  category?: TransactionCategory
+  asset?: AssetCode
 }
 
 export function useTransactions() {
-  const { fiat, wallet } = useFinanceServices()
-  const { withErrorBoundary, hasError, error } = useErrorBoundary()
+  const { wallet, fiat } = useFinanceServices()
+  const { withErrorBoundary, hasError, error, captureError } = useErrorBoundary()
 
   const [loading, setLoading] = useState(false)
 
-  const getTransactions = useCallback(async (filters?: TransactionFilters): Promise<Transaction[]> => {
-    setLoading(true)
+  const getTransactions = useCallback(
+    async (filters?: TransactionFilters): Promise<Transaction[]> => {
+      setLoading(true)
 
-    try {
-      let filtered = await wallet.getTransactionHistory()
+      try {
+        let filtered = await wallet.getTransactionHistory()
 
-      if (filters) {
-        if (filters.type) {
-          filtered = filtered.filter(t => t.type === filters.type)
+        if (filters) {
+          if (filters.type) {
+            const inTypes = ['receive', 'deposit', 'in']
+            const outTypes = ['send', 'withdraw', 'convert', 'out']
+            filtered = filtered.filter((t) =>
+              filters.type === 'in'
+                ? inTypes.includes(t.type)
+                : outTypes.includes(t.type),
+            )
+          }
+          if (filters.category) {
+            filtered = filtered.filter((t) => t.category === filters.category)
+          }
+          if (filters.asset) {
+            filtered = filtered.filter((t) => t.asset === filters.asset)
+          }
         }
-        if (filters.category) {
-          filtered = filtered.filter(t => t.category === filters.category)
-        }
-        if (filters.currency) {
-          filtered = filtered.filter(t => t.currency === filters.currency)
-        }
+
+        setLoading(false)
+        return filtered
+      } catch (err) {
+        setLoading(false)
+        throw err
       }
+    },
+    [wallet],
+  )
 
-      setLoading(false)
-      return filtered
-    } catch (err) {
-      setLoading(false)
-      throw err
-    }
-  }, [wallet])
+  /**
+   * Format a transaction amount in the given currency.
+   * Falls back to the raw asset amount string if fiat conversion fails.
+   */
+  const formatTransactionAmount = useCallback(
+    (transaction: Transaction, targetCurrency: CurrencyCode = 'USD'): string => {
+      const fallback = `${transaction.amount} ${transaction.asset}`
+      try {
+        // Only attempt fiat format if a fiat currency field exists
+        if (transaction.currency) {
+          return fiat.formatMoney(transaction.amount, transaction.currency)
+        }
+        // Otherwise return USD-denominated estimate if priceUsd is known
+        return fallback
+      } catch (err) {
+        captureError(err as any)
+        return fallback
+      }
+    },
+    [fiat, captureError],
+  )
 
-  const formatTransactionAmount = useCallback((transaction: Transaction): string => {
-    return withErrorBoundary(
-      () => fiat.formatMoney(transaction.amount, transaction.currency),
-      `${transaction.amount} ${transaction.currency}`
-    )
-  }, [fiat, withErrorBoundary])
+  const getTransactionsByCategory = useCallback(
+    async (category: TransactionCategory) => getTransactions({ category }),
+    [getTransactions],
+  )
 
-  const convertTransactionAmount = useCallback((
-    transaction: Transaction,
-    targetCurrency: CurrencyCode
-  ): number => {
-    return withErrorBoundary(
-      () => fiat.convertCurrency(transaction.currency, targetCurrency, transaction.amount),
-      0
-    )
-  }, [fiat, withErrorBoundary])
+  const getTransactionsByType = useCallback(
+    async (type: 'in' | 'out') => getTransactions({ type }),
+    [getTransactions],
+  )
 
-  const getTransactionsByCategory = useCallback(async (category: Transaction['category']) => {
-    return getTransactions({ category })
-  }, [getTransactions])
-
-  const getTransactionsByType = useCallback(async (type: 'in' | 'out') => {
-    return getTransactions({ type })
-  }, [getTransactions])
-
-  const calculateCategoryTotal = useCallback(async (
-    category: Transaction['category'],
-    targetCurrency: CurrencyCode = 'USD'
-  ): Promise<number> => {
-    const categoryTransactions = await getTransactionsByCategory(category)
-
-    return categoryTransactions.reduce((total: number, transaction: Transaction) => {
-      const converted = convertTransactionAmount(transaction, targetCurrency)
-      return total + (transaction.type === 'out' ? -converted : converted)
-    }, 0)
-  }, [getTransactionsByCategory, convertTransactionAmount])
+  const getTransactionsByAsset = useCallback(
+    async (asset: AssetCode) => getTransactions({ asset }),
+    [getTransactions],
+  )
 
   return {
     loading,
@@ -86,9 +94,8 @@ export function useTransactions() {
     error,
     getTransactions,
     formatTransactionAmount,
-    convertTransactionAmount,
     getTransactionsByCategory,
     getTransactionsByType,
-    calculateCategoryTotal
+    getTransactionsByAsset,
   }
 }

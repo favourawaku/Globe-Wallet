@@ -1,4 +1,4 @@
-import { IWalletService, StellarAccount, Balance, Transaction, TransactionResult, AssetCode, StellarServiceError } from '../types'
+import { IWalletService, StellarAccount, Balance, Transaction, TransactionResult, AssetCode, StellarServiceError, WalletServiceError } from '../types'
 import { stellarAccount, cryptoAssets, shortenKey } from '../finance-data'
 import { BaseService } from './base.service'
 import { db } from '../db/mock-db'
@@ -16,6 +16,7 @@ export class WalletService extends BaseService implements IWalletService {
         return {
             publicKey: stellarAccount.publicKey,
             name: 'Primary Wallet',
+            network: stellarAccount.network || 'Stellar Public Network',
             isFunded: true
         }
     }
@@ -33,14 +34,28 @@ export class WalletService extends BaseService implements IWalletService {
     async sendPayment(destination: string, amount: number, asset: AssetCode, memo?: string): Promise<TransactionResult> {
         return this.withPerformanceTracking('sendPayment', async () => {
             try {
+                if (amount <= 0) {
+                    throw new WalletServiceError("Amount must be greater than zero")
+                }
+
                 if (!this.validateAddress(destination)) {
                     throw new StellarServiceError("Invalid destination address")
                 }
 
-                // Simulate Stellar transaction propagation
-                await new Promise(r => setTimeout(r, 1000))
+                // Call mock API for transaction verification/simulation
+                // Using absolute URL when in non-browser context if needed, but relative works with mock/fetch
+                const response = await fetch('/api/wallet/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination, amount, asset, memo })
+                })
 
-                const hash = "0x" + Math.random().toString(16).slice(2, 66)
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}))
+                    throw new StellarServiceError(errBody.error || "Payment verification failed")
+                }
+
+                const result = await response.json() as TransactionResult
 
                 // Persistence (Level 2 Sync)
                 await db.saveTransaction({
@@ -51,14 +66,10 @@ export class WalletService extends BaseService implements IWalletService {
                     address: destination,
                     date: 'Just now',
                     status: 'completed',
-                    stellarHash: hash
+                    stellarHash: result.hash
                 })
 
-                return {
-                    success: true,
-                    hash,
-                    status: 'completed'
-                }
+                return result
             } catch (err) {
                 this.handleError(err, 'sendPayment')
             }
@@ -74,7 +85,7 @@ export class WalletService extends BaseService implements IWalletService {
         if (address.length !== 56) return false
         if (!address.startsWith('G')) return false
 
-        const stellarRegex = /^G[A-Z2-7]{55}$/
+        const stellarRegex = /^G[A-Z0-9]{55}$/i
         return stellarRegex.test(address)
     }
 

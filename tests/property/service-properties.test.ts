@@ -2,6 +2,7 @@ import fc from 'fast-check'
 import { AssetService } from '../../lib/services/asset.service'
 import { FiatService } from '../../lib/services/fiat.service'
 import { StellarService } from '../../lib/services/stellar.service'
+import { AssetCode, CurrencyCode } from '../../lib/types'
 
 describe('Service Interface Compliance Properties', () => {
   const assetService = new AssetService()
@@ -20,13 +21,13 @@ describe('Service Interface Compliance Properties', () => {
         expect(assets.length).toBeGreaterThan(0)
 
         // Test formatting
-        const formatted = assetService.formatAsset(amount, assetCode)
+        const formatted = assetService.formatAsset(amount, assetCode as AssetCode)
         expect(typeof formatted).toBe('string')
         expect(formatted).toContain(assetCode)
 
         // Test conversion
         if (assetCode === 'XLM') {
-          const converted = assetService.convertAsset(assetCode, 'USDC', amount)
+          const converted = assetService.convertAsset(assetCode as AssetCode, 'USDC', amount)
           expect(typeof converted).toBe('number')
           expect(converted).toBeGreaterThan(0)
         }
@@ -45,12 +46,12 @@ describe('Service Interface Compliance Properties', () => {
         expect(wallets.length).toBeGreaterThan(0)
 
         // Test formatting
-        const formatted = fiatService.formatMoney(amount, currency)
+        const formatted = fiatService.formatMoney(amount, currency as CurrencyCode)
         expect(typeof formatted).toBe('string')
         expect(formatted.length).toBeGreaterThan(0)
 
         // Test exchange rates
-        const rate = fiatService.getExchangeRate(currency, 'USD')
+        const rate = fiatService.getExchangeRate(currency as CurrencyCode, 'USD')
         expect(typeof rate).toBe('number')
         expect(rate).toBeGreaterThan(0)
       }

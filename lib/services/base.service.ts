@@ -1,4 +1,4 @@
-import { StellarServiceError } from '../types'
+import { ServiceError, StellarServiceError } from '../types'
 
 /**
  * Level 2 Architecture Sync: Base Service Abstraction
@@ -18,7 +18,7 @@ export abstract class BaseService {
     protected handleError(error: any, context: string): never {
         console.error(`[${this.serviceName}] Error in ${context}:`, error)
 
-        if (error instanceof StellarServiceError) {
+        if (error instanceof ServiceError) {
             throw error
         }
 

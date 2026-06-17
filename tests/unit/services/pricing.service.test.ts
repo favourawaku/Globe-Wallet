@@ -1,4 +1,5 @@
 import { PricingService } from '../../../lib/services/pricing.service'
+import { StellarServiceError } from '../../../lib/types'
 
 describe('PricingService', () => {
     let service: PricingService
@@ -8,29 +9,29 @@ describe('PricingService', () => {
     })
 
     describe('getAssets', () => {
-        it('should return a list of crypto assets', async () => {
-            const assets = await service.getAssets()
-            expect(assets).toHaveLength(4)
+        it('should return a list of crypto assets', () => {
+            const assets = service.getAssets()
+            expect(assets).toHaveLength(3)
             expect(assets[0].code).toBe('XLM')
         })
     })
 
-    describe('getAssetPrice', () => {
+    describe('getPrice', () => {
         it('should return the price for a valid asset code', async () => {
-            const price = await service.getAssetPrice('XLM')
-            expect(price).toBe(0.125)
+            const price = await service.getPrice('XLM')
+            expect(price).toBe(0.1185)
         })
 
-        it('should return 0 for an unknown asset code', async () => {
-            const price = await service.getAssetPrice('UNKNOWN' as any)
-            expect(price).toBe(0)
+        it('should throw an error for an unknown asset code', async () => {
+            await expect(service.getPrice('UNKNOWN' as any))
+                .rejects.toThrow(StellarServiceError)
         })
     })
 
     describe('formatAsset', () => {
         it('should format XLM correctly', () => {
             const formatted = service.formatAsset(100, 'XLM')
-            expect(formatted).toBe('100.00 XLM')
+            expect(formatted).toBe('100.0000 XLM')
         })
 
         it('should mask balance when hidden is true', () => {

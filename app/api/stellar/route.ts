@@ -3,8 +3,8 @@ import { financeServices } from '../../../lib/services/container'
 
 export async function GET() {
   try {
-    const account = financeServices.stellar.getAccountInfo()
-    const offRampMethods = financeServices.stellar.getOffRampMethods()
+    const account = financeServices.wallet.getAccountInfo()
+    const offRampMethods = financeServices.offRamp.getMethods()
     
     return NextResponse.json({ 
       success: true, 
@@ -27,15 +27,16 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'validateAddress':
-        const isValid = financeServices.stellar.validateAddress(data.address)
+        const isValid = financeServices.wallet.validateAddress(data.address)
         return NextResponse.json({ success: true, data: { isValid } })
       
       case 'generateAddress':
-        const address = financeServices.stellar.generateReceiveAddress()
+        const address = financeServices.wallet.generateReceiveAddress()
         return NextResponse.json({ success: true, data: { address } })
       
       case 'getOffRampRate':
-        const rate = financeServices.stellar.getOffRampRate(data.currency)
+        const rates = await financeServices.offRamp.getRates()
+        const rate = rates[data.currency] ?? 1.0
         return NextResponse.json({ success: true, data: { currency: data.currency, rate } })
       
       default:

@@ -1,36 +1,47 @@
-"use client"
+'use client'
 
-import { useState, useMemo } from "react"
-import { Send, CheckCircle2, AlertCircle, Loader2, Coins, ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ContactPicker } from "@/components/ui/contact-picker"
-import { SendSummary } from "@/components/dashboard/send-summary"
-import { useWallet, usePricing } from "@/hooks/useFinanceServices"
-import { useBalances } from "@/hooks/useBalances"
-import { useContacts } from "@/hooks/useContacts"
-import { SendConfirmation } from "@/lib/types"
-
-const ESTIMATED_FEE = 0.00001
+import { useState, useMemo, useId } from 'react'
+import { Send, CheckCircle2, Loader2, Coins, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { WalletErrorAlert } from '@/components/ui/wallet-error-alert'
+import { usePricing } from '@/hooks/useFinanceServices'
+import { useBalances } from '@/hooks/useBalances'
+import { useWalletSend } from '@/hooks/useWalletSend'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { calculateFee } from '@/lib/helpers/format'
+import type { AssetCode } from '@/lib/types'
 
 export function SendForm() {
-  const { sendPayment, validateAddress, isProcessing } = useWallet() as any
+  const { send, isProcessing, status, error, result, reset } = useWalletSend()
   const { formatAsset } = usePricing()
   const { assets } = useBalances()
   const contactsState = useContacts()
 
-  const [step, setStep] = useState<"form" | "confirm">("form")
-  const [address, setAddress] = useState("")
-  const [amount, setAmount] = useState("")
-  const [selectedAsset, setSelectedAsset] = useState("XLM")
-  const [memo, setMemo] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [confirmation, setConfirmation] = useState<SendConfirmation | null>(null)
+  const [address, setAddress] = useState('')
+  const [amount, setAmount] = useState('')
+  const [selectedAsset, setSelectedAsset] = useState<AssetCode>('XLM')
+  const [memo, setMemo] = useState('')
 
-  const effectiveAddress = contactsState.selected?.address ?? address
+  // Unique IDs for aria associations
+  const addressId = useId()
+  const addressErrorId = useId()
+  const amountId = useId()
+  const memoId = useId()
+
+  const currentAssetBalance = useMemo(
+    () => assets.find((a) => a.code === selectedAsset)?.balance ?? 0,
+    [assets, selectedAsset],
+  )
+
+  const estimatedFee = useMemo(
+    () => calculateFee(parseFloat(amount) || 0),
+    [amount],
+  )
+
+  const hasAddressError = status === 'error' && error?.toLowerCase().includes('address')
+  const hasAmountError = status === 'error' && error?.toLowerCase().includes('amount')
 
   const currentAssetBalance = useMemo(
     () => assets.find(a => a.code === selectedAsset)?.balance ?? 0,
@@ -39,237 +50,216 @@ export function SendForm() {
 
   const handleReview = (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-
-    if (!validateAddress(effectiveAddress)) {
-      setError("Invalid Stellar address")
-      return
-    }
-
-    const numAmount = parseFloat(amount)
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError("Please enter a valid amount")
-      return
-    }
-
-    if (numAmount > currentAssetBalance) {
-      setError(`Insufficient ${selectedAsset} balance`)
-      return
-    }
-
-    setConfirmation({
-      recipient: effectiveAddress,
-      recipientLabel: contactsState.selected?.name,
-      amount: numAmount,
-      asset: selectedAsset as any,
-      memo: memo || undefined,
-      estimatedFee: ESTIMATED_FEE,
-    })
-    setStep("confirm")
+    await send(address, amount, selectedAsset, memo || undefined)
   }
 
-  const handleConfirm = async () => {
-    if (!confirmation) return
-    setError(null)
-    try {
-      const result = await sendPayment(
-        confirmation.recipient,
-        confirmation.amount,
-        confirmation.asset,
-        confirmation.memo
-      )
-      if (result.status === "completed") {
-        setSuccess(
-          `Successfully sent ${formatAsset(confirmation.amount, confirmation.asset)} to ${confirmation.recipientLabel ?? confirmation.recipient.slice(0, 8) + "…"}`
-        )
-        setAddress("")
-        setAmount("")
-        setMemo("")
-        contactsState.select(null)
-        setStep("form")
-        setConfirmation(null)
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to send payment")
-      setStep("form")
-    }
+  const handleReset = () => {
+    setAddress('')
+    setAmount('')
+    setMemo('')
+    reset()
   }
 
   return (
     <Card
-      data-testid="send-form-card"
       className="w-full max-w-md border-primary/20 shadow-2xl bg-card/50 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500"
+      data-testid="send-form-card"
     >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {step === "confirm" && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 mr-1"
-              aria-label="Back to form"
-              data-testid="back-button"
-              onClick={() => { setStep("form"); setError(null) }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <Send className="w-5 h-5 text-primary" />
-          {step === "confirm" ? "Confirm Send" : "Send Assets"}
+          <Send className="w-5 h-5 text-primary" aria-hidden />
+          Send Assets
         </CardTitle>
         <CardDescription>
-          {step === "confirm"
-            ? "Review the details before confirming."
-            : "Transfer Lumens or tokens securely to any Stellar address."}
+          Transfer Lumens or tokens securely to any Stellar address.
         </CardDescription>
       </CardHeader>
 
-      {step === "form" ? (
-        <form onSubmit={handleReview} aria-label="Send assets form">
-          <CardContent className="space-y-4">
-            {/* Contact picker */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Quick Select Contact</label>
-              <ContactPicker
-                contacts={contactsState.contacts}
-                selected={contactsState.selected}
-                query={contactsState.query}
-                onQueryChange={contactsState.setQuery}
-                onSelect={contactsState.select}
-              />
-            </div>
+      <form onSubmit={handleSubmit} aria-label="Send payment form" noValidate>
+        <CardContent className="space-y-4">
+          {/* Recipient Address */}
+          <div className="space-y-2">
+            <label htmlFor={addressId} className="text-sm font-medium">
+              Recipient Address
+            </label>
+            <Input
+              id={addressId}
+              data-testid="address-input"
+              placeholder="e.g. GDXSPAY..."
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="bg-background/50"
+              aria-invalid={hasAddressError || undefined}
+              aria-describedby={hasAddressError ? addressErrorId : undefined}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
 
-            {/* Manual address — hidden when a contact with an address is selected */}
-            {!contactsState.selected?.address && (
-              <div className="space-y-2">
-                <label htmlFor="address" className="text-sm font-medium">Recipient Address</label>
-                <Input
-                  id="address"
-                  placeholder="e.g. GDXSPAY…"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  className="bg-background/50"
-                  aria-describedby={error ? "send-error" : undefined}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-2">
-                <label htmlFor="amount" className="text-sm font-medium">Amount</label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Asset</label>
-                <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                  <SelectTrigger className="bg-background/50" aria-label="Select asset">
-                    <SelectValue placeholder="Asset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assets.map(asset => (
-                      <SelectItem key={asset.code} value={asset.code}>
-                        <div className="flex items-center gap-2">
-                          <Coins className="w-4 h-4 text-primary" />
-                          {asset.code}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <p className="px-1 text-xs text-muted-foreground italic">
-              Balance: {formatAsset(currentAssetBalance, selectedAsset as any)}
-            </p>
-
-            <div className="space-y-2">
-              <label htmlFor="memo" className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-                Memo
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase opacity-50">Optional</span>
+          {/* Amount + Asset */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-2">
+              <label htmlFor={amountId} className="text-sm font-medium">
+                Amount
               </label>
               <Input
-                id="memo"
-                placeholder="Transaction note"
-                value={memo}
-                onChange={e => setMemo(e.target.value)}
-                className="h-8 bg-background/50 text-sm"
+                id={amountId}
+                data-testid="amount-input"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="bg-background/50"
+                aria-invalid={hasAmountError || undefined}
+                aria-describedby={hasAmountError ? addressErrorId : undefined}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" id="asset-select-label">
+                Asset
+              </label>
+              <Select
+                value={selectedAsset}
+                onValueChange={(v) => setSelectedAsset(v as AssetCode)}
+              >
+                <SelectTrigger
+                  className="bg-background/50"
+                  aria-labelledby="asset-select-label"
+                  data-testid="asset-select"
+                >
+                  <SelectValue placeholder="Asset" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assets.map((asset) => (
+                    <SelectItem
+                      key={asset.code}
+                      value={asset.code}
+                      data-testid={`asset-option-${asset.code}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-4 h-4 text-primary" aria-hidden />
+                        {asset.code}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            {error && (
-              <div
-                id="send-error"
-                role="alert"
-                data-testid="send-error"
-                className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                {error}
-              </div>
+          {/* Balance + Fee info */}
+          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+            <span>
+              Balance:{' '}
+              <span data-testid="current-balance">
+                {formatAsset(currentAssetBalance, selectedAsset)}
+              </span>
+            </span>
+            {parseFloat(amount) > 0 && (
+              <span data-testid="fee-estimate">
+                Est. fee: {estimatedFee.toFixed(6)} {selectedAsset}
+              </span>
             )}
+          </div>
 
-            {success && (
-              <div
-                role="status"
-                data-testid="send-success"
-                className="flex items-start gap-2 rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400 animate-in fade-in zoom-in-95 duration-200"
+          {/* Memo */}
+          <div className="space-y-2">
+            <label
+              htmlFor={memoId}
+              className="text-sm font-medium text-muted-foreground flex items-center justify-between"
+            >
+              Memo{' '}
+              <span className="text-[10px] uppercase font-bold opacity-50 px-1.5 py-0.5 bg-muted rounded">
+                Optional
+              </span>
+            </label>
+            <Input
+              id={memoId}
+              data-testid="memo-input"
+              placeholder="Transaction note"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              className="bg-background/50 h-8 text-sm"
+            />
+          </div>
+
+          {/* Error state */}
+          {status === 'error' && error && (
+            <WalletErrorAlert
+              id={addressErrorId}
+              message={error}
+              data-testid="send-error"
+              onRetry={handleReset}
+            />
+          )}
+
+          {/* Success state */}
+          {status === 'success' && result && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="send-success"
+              className="p-3 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 text-sm flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200"
+            >
+              <span className="flex items-center gap-2 font-semibold">
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden />
+                Transaction Successful
+              </span>
+              {result.hash && (
+                <span className="text-xs opacity-80 font-mono break-all">
+                  Hash: {result.hash.slice(0, 20)}…
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleReset}
+                className="mt-1 text-xs underline self-start"
+                data-testid="send-again-btn"
               >
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                {success}
-              </div>
+                Send another
+              </button>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex gap-2">
+          <Button
+            type="submit"
+            className="flex-1 group relative overflow-hidden"
+            disabled={isProcessing || status === 'success'}
+            data-testid="send-submit-btn"
+            aria-busy={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden />
+                Processing…
+              </>
+            ) : (
+              <>
+                <Send
+                  className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform"
+                  aria-hidden
+                />
+                Confirm Send
+              </>
             )}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" data-testid="review-button">
-              <Send className="mr-2 h-4 w-4" />
-              Review Send
-            </Button>
-          </CardFooter>
-        </form>
-      ) : (
-        <div>
-          <CardContent className="space-y-4">
-            {confirmation && <SendSummary confirmation={confirmation} />}
-            {error && (
-              <div
-                role="alert"
-                data-testid="send-error"
-                className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter>
+          </Button>
+          {status !== 'idle' && (
             <Button
               type="button"
-              className="w-full group relative overflow-hidden"
-              disabled={isProcessing}
-              data-testid="confirm-send-button"
-              onClick={handleConfirm}
+              variant="outline"
+              size="icon"
+              onClick={handleReset}
+              aria-label="Reset form"
+              data-testid="reset-btn"
             >
-              {isProcessing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              {isProcessing ? "Processing…" : "Confirm Send"}
+              <RefreshCw className="w-4 h-4" aria-hidden />
             </Button>
-          </CardFooter>
-        </div>
-      )}
+          )}
+        </CardFooter>
+      </form>
     </Card>
   )
 }

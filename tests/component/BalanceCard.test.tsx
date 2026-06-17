@@ -10,6 +10,7 @@ const mockAssetService = {
     { code: 'XLM', name: 'Stellar Lumens', balance: 1000, priceUsd: 0.10, changePct: 5.0, color: 'bg-blue-500' }
   ]),
   getAssetPrice: jest.fn().mockResolvedValue(0.10),
+  getPrice: jest.fn().mockResolvedValue(0.10),
   convertAsset: jest.fn(),
   formatAsset: jest.fn().mockReturnValue('1000.00 XLM')
 }
@@ -33,8 +34,13 @@ const mockStellarService = {
 }
 
 const mockServices = new FinanceServiceContainer(
+  undefined,
+  undefined,
+  undefined,
   mockAssetService as any,
   mockFiatService as any,
+  undefined,
+  undefined,
   mockStellarService as any
 )
 
@@ -94,8 +100,13 @@ describe('BalanceCard', () => {
     }
 
     const errorServices = new FinanceServiceContainer(
+      undefined,
+      undefined,
+      undefined,
       mockAssetService as any,
       errorService as any,
+      undefined,
+      undefined,
       mockStellarService as any
     )
 

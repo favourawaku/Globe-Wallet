@@ -2,6 +2,7 @@ import fc from 'fast-check'
 import { AssetService } from '../../lib/services/asset.service'
 import { FiatService } from '../../lib/services/fiat.service'
 import { StellarService } from '../../lib/services/stellar.service'
+import { AssetCode, CurrencyCode } from '../../lib/types'
 import { FinanceServiceContainer } from '../../lib/services/container'
 
 describe('Type System Correctness Properties', () => {
@@ -33,8 +34,8 @@ describe('Type System Correctness Properties', () => {
         expect(typeof account.network).toBe('string')
 
         // Test formatted outputs are strings
-        const assetFormatted = assetService.formatAsset(amount, assetCode)
-        const fiatFormatted = fiatService.formatMoney(amount, currencyCode)
+        const assetFormatted = assetService.formatAsset(amount, assetCode as AssetCode)
+        const fiatFormatted = fiatService.formatMoney(amount, currencyCode as CurrencyCode)
         
         expect(typeof assetFormatted).toBe('string')
         expect(typeof fiatFormatted).toBe('string')
@@ -80,7 +81,7 @@ describe('Type System Correctness Properties', () => {
       (fromAsset, toCurrency, amount) => {
         // Asset conversions should return valid numbers
         if (fromAsset !== 'XLM') { // Avoid same-asset conversion
-          const converted = assetService.convertAsset(fromAsset, 'XLM', amount)
+          const converted = assetService.convertAsset(fromAsset as AssetCode, 'XLM', amount)
           expect(typeof converted).toBe('number')
           expect(converted).toBeGreaterThan(0)
           expect(Number.isFinite(converted)).toBe(true)
@@ -88,18 +89,18 @@ describe('Type System Correctness Properties', () => {
 
         // Fiat conversions should return valid numbers
         if (toCurrency !== 'USD') { // Avoid same-currency conversion
-          const converted = fiatService.convertCurrency('USD', toCurrency, amount)
+          const converted = fiatService.convertCurrency('USD', toCurrency as CurrencyCode, amount)
           expect(typeof converted).toBe('number')
           expect(converted).toBeGreaterThan(0)
           expect(Number.isFinite(converted)).toBe(true)
         }
 
         // Exchange rates should be positive numbers
-        const rate = fiatService.getExchangeRate('USD', toCurrency)
+        const rate = fiatService.getExchangeRate('USD', toCurrency as CurrencyCode)
         expect(typeof rate).toBe('number')
         expect(rate).toBeGreaterThan(0)
         expect(Number.isFinite(rate)).toBe(true)
       }
     ), { numRuns: 100 })
   })
-}
+})

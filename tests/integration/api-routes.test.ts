@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { NextRequest } from 'next/server'
 import { GET as assetsGET, POST as assetsPOST } from '../../app/api/assets/route'
 import { GET as walletsGET, POST as walletsPOST } from '../../app/api/wallets/route'

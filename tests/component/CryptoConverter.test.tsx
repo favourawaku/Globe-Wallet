@@ -12,9 +12,13 @@ const mockAssetService = {
 }
 
 const mockServices = new FinanceServiceContainer(
-  mockAssetService as any,
-  {} as any,
-  {} as any
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  mockAssetService as any
 )
 
 const renderWithServices = (component: React.ReactNode) => {
@@ -95,7 +99,15 @@ describe('CryptoConverter', () => {
       })
     }
 
-    const errorServices = new FinanceServiceContainer(errorService as any, {} as any, {} as any)
+    const errorServices = new FinanceServiceContainer(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      errorService as any
+    )
 
     render(
       <FinanceServicesProvider services={errorServices}>

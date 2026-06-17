@@ -6,6 +6,10 @@ describe('WalletService', () => {
 
     beforeEach(() => {
         service = new WalletService()
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ success: true, hash: '0xhash123', status: 'completed' })
+        })
     })
 
     describe('getAccountInfo', () => {
@@ -21,8 +25,8 @@ describe('WalletService', () => {
             const balances = await service.getBalance()
             expect(balances).toBeDefined()
             expect(balances.length).toBeGreaterThan(0)
-            expect(balances[0]).toHaveProperty('code')
-            expect(balances[0]).toHaveProperty('balance')
+            expect(balances[0]).toHaveProperty('asset')
+            expect(balances[0]).toHaveProperty('amount')
         })
     })
 
@@ -48,7 +52,7 @@ describe('WalletService', () => {
     describe('sendPayment', () => {
         it('should execute a payment successfully', async () => {
             const result = await service.sendPayment(
-                'GC3G2N7N5LRYX6L5N2YHV3K2L9P8QW1ZC4T6BNRYX',
+                'GC3G2N7N5LRYX6L5N2YHV3K2L9P8QW1ZC4T6BNRYX7QK3MUKXHV2RZ4D',
                 100,
                 'XLM'
             )

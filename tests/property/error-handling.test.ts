@@ -47,4 +47,4 @@ describe('Error Handling Properties', () => {
       }
     ), { numRuns: 100 })
   })
-}
+})
