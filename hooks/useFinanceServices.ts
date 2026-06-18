@@ -121,15 +121,3 @@ export function useSoroban() {
     stake: (amt: number, asset: AssetCode) => soroban.stakeAssets(amt, asset),
   }
 }
-
-export function useWallets() {
-  const { fiat } = useFinanceServices()
-  return {
-    getWallets: () => fiat.getWallets(),
-    formatMoney: (amount: number, currency: CurrencyCode, hidden?: boolean) =>
-      fiat.formatMoney(amount, currency, hidden),
-    convertCurrency: (from: CurrencyCode, to: CurrencyCode, amount: number) =>
-      fiat.convertCurrency(from, to, amount),
-    getAccountBalance: () => fiat.getAccountBalance(),
-  }
-}

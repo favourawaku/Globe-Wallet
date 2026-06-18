@@ -88,6 +88,19 @@ export function useTransactions() {
     [getTransactions],
   )
 
+  const calculateCategoryTotal = useCallback(
+    async (category: TransactionCategory, currency: CurrencyCode): Promise<number> => {
+      const txs = await getTransactions({ category })
+      const inTypes = ['receive', 'deposit', 'in']
+      return txs.reduce((sum, tx) => {
+        const isIncoming = inTypes.includes(tx.type)
+        const multiplier = isIncoming ? 1 : -1
+        return sum + (tx.amount * multiplier)
+      }, 0)
+    },
+    [getTransactions],
+  )
+
   return {
     loading,
     hasError,
@@ -97,5 +110,6 @@ export function useTransactions() {
     getTransactionsByCategory,
     getTransactionsByType,
     getTransactionsByAsset,
+    calculateCategoryTotal,
   }
 }

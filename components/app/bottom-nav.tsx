@@ -17,14 +17,15 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-border bg-card/95 backdrop-blur-md">
-      <ul className="flex items-center justify-around px-2 py-2">
+    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-border bg-card/95 backdrop-blur-md" data-testid="bottom-nav">
+      <ul className="flex items-center justify-around px-2 py-2" role="navigation" aria-label="Main navigation">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           return (
             <li key={item.label} className="flex-1">
               <Link
                 href={item.href}
+                data-testid={`nav-${item.label.toLowerCase()}`}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-medium transition-all duration-300",
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",

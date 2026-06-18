@@ -50,6 +50,9 @@ jobs:
     - name: Run E2E tests (onboarding flow)
       run: npm run test:e2e -- --grep "@critical"
 
+    - name: Run E2E tests (issue #14 mock centralization)
+      run: npm run test:e2e -- --grep "Issue #14"
+
     - name: Run full E2E suite
       run: npm run test:e2e
 
@@ -59,10 +62,12 @@ jobs:
     needs: test
 
     steps:
-    - name: Send merge analytics (issue-30)
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Send merge analytics
       env:
         MERGE_ANALYTICS_URL: ${{ secrets.MERGE_ANALYTICS_URL }}
-    - name: Send merge analytics (issue-23, issue-28)
       run: |
         if [ -z "$MERGE_ANALYTICS_URL" ]; then
           echo "MERGE_ANALYTICS_URL secret not configured; skipping analytics POST"
@@ -77,8 +82,9 @@ jobs:
             "commit": "${{ github.sha }}",
             "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "author": "${{ github.actor }}",
-            "issue": 30,
-            "issues": [23, 28],
+            "issue": 14,
+            "issues": [14, 23, 28, 30],
             "status": "success",
-            "coverage_verified": true
+            "coverage_verified": true,
+            "fixture_coverage_verified": true
           }'

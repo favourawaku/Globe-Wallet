@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { WalletErrorAlert } from '@/components/ui/wallet-error-alert'
-import { usePricing } from '@/hooks/useFinanceServices'
+import { usePricing, useWallets } from '@/hooks/useFinanceServices'
 import { useBalances } from '@/hooks/useBalances'
 import { useWalletSend } from '@/hooks/useWalletSend'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -17,14 +17,12 @@ export function SendForm() {
   const { send, isProcessing, status, error, result, reset } = useWalletSend()
   const { formatAsset } = usePricing()
   const { assets } = useBalances()
-  const contactsState = useContacts()
 
   const [address, setAddress] = useState('')
   const [amount, setAmount] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<AssetCode>('XLM')
   const [memo, setMemo] = useState('')
 
-  // Unique IDs for aria associations
   const addressId = useId()
   const addressErrorId = useId()
   const amountId = useId()
@@ -43,12 +41,7 @@ export function SendForm() {
   const hasAddressError = status === 'error' && error?.toLowerCase().includes('address')
   const hasAmountError = status === 'error' && error?.toLowerCase().includes('amount')
 
-  const currentAssetBalance = useMemo(
-    () => assets.find(a => a.code === selectedAsset)?.balance ?? 0,
-    [assets, selectedAsset]
-  )
-
-  const handleReview = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     await send(address, amount, selectedAsset, memo || undefined)
   }
@@ -77,7 +70,6 @@ export function SendForm() {
 
       <form onSubmit={handleSubmit} aria-label="Send payment form" noValidate>
         <CardContent className="space-y-4">
-          {/* Recipient Address */}
           <div className="space-y-2">
             <label htmlFor={addressId} className="text-sm font-medium">
               Recipient Address
@@ -96,7 +88,6 @@ export function SendForm() {
             />
           </div>
 
-          {/* Amount + Asset */}
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-2">
               <label htmlFor={amountId} className="text-sm font-medium">
@@ -147,8 +138,8 @@ export function SendForm() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-          {/* Balance + Fee info */}
           <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>
               Balance:{' '}
@@ -163,7 +154,6 @@ export function SendForm() {
             )}
           </div>
 
-          {/* Memo */}
           <div className="space-y-2">
             <label
               htmlFor={memoId}
@@ -184,7 +174,6 @@ export function SendForm() {
             />
           </div>
 
-          {/* Error state */}
           {status === 'error' && error && (
             <WalletErrorAlert
               id={addressErrorId}
@@ -194,7 +183,6 @@ export function SendForm() {
             />
           )}
 
-          {/* Success state */}
           {status === 'success' && result && (
             <div
               role="status"

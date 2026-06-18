@@ -4,7 +4,8 @@ import { QuickActions } from "@/components/app/quick-actions"
 import { CryptoHoldings } from "@/components/app/crypto-holdings"
 import { TransactionList } from "@/components/app/transaction-list"
 import { StatsCards } from "@/components/dashboard/stats-cards"
-import { savingsGoals, formatMoney } from "@/lib/finance-data"
+import { MOCK_SAVINGS_GOALS } from "@/lib/fixtures"
+import { formatCurrency } from "@/lib/helpers/format"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
@@ -31,13 +32,13 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1">
-          {savingsGoals.map((goal) => {
+          {MOCK_SAVINGS_GOALS.map((goal) => {
             const pct = Math.round((goal.saved / goal.target) * 100)
             return (
               <Card key={goal.id} className="w-44 shrink-0 p-4">
                 <p className="text-sm font-semibold text-foreground">{goal.title}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {formatMoney(goal.saved, goal.currency)} of {formatMoney(goal.target, goal.currency)}
+                  {formatCurrency(goal.saved, goal.currency)} of {formatCurrency(goal.target, goal.currency)}
                 </p>
                 <Progress value={pct} className="mt-3 h-1.5" />
                 <p className="mt-2 text-xs font-medium text-primary">{pct}% saved</p>

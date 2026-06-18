@@ -5,10 +5,9 @@
 
 export type AssetCode = 'XLM' | 'USDC' | 'USDT' | 'NGN' | 'USD' | 'EUR'
 export type CurrencyCode = 'NGN' | 'USD' | 'EUR' | 'GBP'
-export type TransactionCategory = 'transfer' | 'airtime' | 'bills' | 'savings' | 'card' | 'deposit'
-export type TransactionDirection = 'in' | 'out'
-
 export type TransactionCategory = 'payment' | 'exchange' | 'withdrawal' | 'deposit' | 'transfer' | 'airtime' | 'bills' | 'savings' | 'card'
+export type TransactionDirection = 'in' | 'out'
+export type FixtureType = 'balances' | 'transactions' | 'wallets' | 'assets' | 'contacts' | 'rates' | 'savings' | 'cards' | 'stellar'
 
 // ── Domain Models ───────────────────────────────────────────────────────────
 
@@ -22,14 +21,13 @@ export interface StellarAccount {
 export interface Wallet {
   id: string
   name: string
-  /** Display label; defaults to `name` in UI helpers */
-  label?: string
   code: CurrencyCode
   balance: number
   color: string
+  /** Display label; defaults to `name` in UI helpers */
+  label?: string
   /** Weekly change percentage, optional legacy field */
   changePct?: number
-  label?: string
   symbol?: string
 }
 
@@ -39,11 +37,9 @@ export interface CryptoAsset {
   balance: number
   priceUsd: number
   change24h: number
-  /** UI alias for 24h change percentage */
-  changePct?: number
-  color: string
   /** Percentage change, alias for compatibility with older components */
   changePct?: number
+  color: string
 }
 
 export interface Contact {
@@ -263,9 +259,6 @@ export interface IFiatService {
   formatMoney(amount: number, currency: CurrencyCode, hidden?: boolean): string
   convertCurrency(from: CurrencyCode, to: CurrencyCode, amount: number): number
   getAccountBalance(): number
-  getWallets(): Wallet[]
-  formatMoney(amount: number, currency: CurrencyCode, hidden?: boolean): string
-  convertCurrency(from: CurrencyCode, to: CurrencyCode, amount: number): number
 }
 
 export interface MergeAnalyticsPayload {
@@ -339,4 +332,66 @@ export interface IFinanceServiceContainer {
   // Legacy compatibility
   asset: IAssetService
   stellar: IStellarService
+}
+
+// ── API Response Types ───────────────────────────────────────────────────────
+
+export interface TransactionsResponse {
+  success: boolean
+  data?: Transaction[]
+  error?: string
+}
+
+// ── Mock Centralization Types (Issue #14) ────────────────────────────────────
+
+/** Configuration for mock data generation behavior */
+export interface MockDataConfig {
+  /** Seed for reproducible random generation */
+  seed?: number
+  /** Whether to add artificial latency (ms) to simulate network */
+  latencyMs?: number
+  /** Error injection: probability 0–1 of triggering a failure */
+  failureRate?: number
+}
+
+/** Interface for the centralized fixture factory */
+export interface IFixtureFactory {
+  getBalances(): Balance[]
+  getTransactions(): Transaction[]
+  getTransactionsCompact(): Transaction[]
+  getWallets(): Wallet[]
+  getCryptoAssets(): CryptoAsset[]
+  getContacts(): Contact[]
+  getSavingsGoals(): SavingsGoal[]
+  getPaymentCards(): PaymentCard[]
+  getConversionRates(): Record<string, Record<string, number>>
+  getSimpleRates(): Record<string, number>
+  getStellarAccount(): StellarAccount
+  getTestStellarAddress(): string
+  getXlmUsdRate(): number
+
+  createBalance(overrides?: Partial<Balance>): Balance
+  createTransaction(overrides?: Partial<Transaction>): Transaction
+  createWallet(overrides?: Partial<Wallet>): Wallet
+  createContact(overrides?: Partial<Contact>): Contact
+  createSavingsGoal(overrides?: Partial<SavingsGoal>): SavingsGoal
+  createPaymentCard(overrides?: Partial<PaymentCard>): PaymentCard
+  createPortfolio(): {
+    wallets: Wallet[]
+    cryptoAssets: CryptoAsset[]
+    balances: Balance[]
+    transactions: Transaction[]
+    contacts: Contact[]
+    savingsGoals: SavingsGoal[]
+    paymentCards: PaymentCard[]
+    rates: Record<string, number>
+    stellarAccount: StellarAccount
+  }
+  resetCounter(): void
+}
+
+/** Payload for CI merge analytics POST (Issue #14) */
+export interface Issue14MergePayload extends MergeAnalyticsPayload {
+  issues: number[]
+  fixture_coverage_verified: boolean
 }

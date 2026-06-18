@@ -1,5 +1,5 @@
 import { StellarAccount, Transaction, AssetCode } from '../types'
-import { stellarAccount, transactions } from '../finance-data'
+import { MOCK_STELLAR_ACCOUNT, MOCK_TRANSACTIONS_COMPACT } from '../fixtures'
 
 /**
  * Level 2 Architecture Sync: Persistent Storage Abstraction
@@ -50,7 +50,7 @@ class MockDB {
         this.walletAccounts.push({
             id: generateId(),
             user_id: userId,
-            public_key: stellarAccount.publicKey,
+            public_key: MOCK_STELLAR_ACCOUNT.publicKey,
             encrypted_private_key: 'vault...key',
             account_type: 'standard',
             is_active: true,
@@ -58,7 +58,7 @@ class MockDB {
         })
 
         // Initial Transactions (preserve display metadata from seed data)
-        this.transactions = transactions.map((tx) => ({ ...tx }))
+        this.transactions = MOCK_TRANSACTIONS_COMPACT.map((tx) => ({ ...tx }))
     }
 
     // User Operations
