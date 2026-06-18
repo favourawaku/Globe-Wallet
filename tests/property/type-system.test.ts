@@ -1,25 +1,25 @@
 import fc from 'fast-check'
-import { AssetService } from '../../lib/services/asset.service'
+import { WalletService } from '../../lib/services/wallet.service'
+import { PricingService } from '../../lib/services/pricing.service'
 import { FiatService } from '../../lib/services/fiat.service'
 import { StellarService } from '../../lib/services/stellar.service'
 import { AssetCode, CurrencyCode } from '../../lib/types'
 import { FinanceServiceContainer } from '../../lib/services/container'
+import { TEST_STELLAR_ADDRESS } from '../../lib/finance-data'
 
 describe('Type System Correctness Properties', () => {
-  const assetService = new AssetService()
+  const walletService = new WalletService()
+  const pricingService = new PricingService()
   const fiatService = new FiatService()
-  const stellarService = new StellarService()
   const container = new FinanceServiceContainer()
 
-  // Property 5: Type System Correctness
   it('Property 5: All service operations should maintain type safety', () => {
     fc.assert(fc.property(
       fc.constantFrom('XLM', 'USDC', 'USDT'),
       fc.constantFrom('NGN', 'USD', 'GBP'),
-      fc.float({ min: 0.01, max: 10000 }),
+      fc.double({ min: 0.01, max: 10000, noNaN: true }),
       (assetCode, currencyCode, amount) => {
-        // Test that all operations return correct types
-        const assets = assetService.getAssets()
+        const assets = pricingService.getAssets()
         expect(assets).toBeInstanceOf(Array)
         expect(assets.every(a => typeof a.code === 'string')).toBe(true)
         expect(assets.every(a => typeof a.balance === 'number')).toBe(true)
@@ -29,9 +29,12 @@ describe('Type System Correctness Properties', () => {
         expect(wallets.every(w => typeof w.code === 'string')).toBe(true)
         expect(wallets.every(w => typeof w.balance === 'number')).toBe(true)
 
-        const account = stellarService.getAccountInfo()
+        const account = walletService.getAccountInfo()
         expect(typeof account.publicKey).toBe('string')
-        expect(typeof account.network).toBe('string')
+        expect(typeof account.isFunded).toBe('boolean')
+
+        const assetFormatted = pricingService.formatAsset(amount, assetCode as any)
+        const fiatFormatted = fiatService.formatMoney(amount, currencyCode as any)
 
         // Test formatted outputs are strings
         const assetFormatted = assetService.formatAsset(amount, assetCode as AssetCode)
@@ -45,28 +48,22 @@ describe('Type System Correctness Properties', () => {
 
   it('Property 5: Service container maintains interface contracts', () => {
     fc.assert(fc.property(
-      fc.constantFrom('asset', 'fiat', 'stellar'),
+      fc.constantFrom('wallet', 'fiat', 'pricing'),
       (serviceType) => {
-        // Test that container provides correct service interfaces
         expect(container).toHaveProperty(serviceType)
-        
-        const service = container[serviceType as keyof typeof container]
-        expect(service).toBeDefined()
-        expect(typeof service).toBe('object')
 
-        // Each service should have expected methods
         switch (serviceType) {
-          case 'asset':
-            expect(typeof container.asset.getAssets).toBe('function')
-            expect(typeof container.asset.formatAsset).toBe('function')
+          case 'wallet':
+            expect(typeof container.wallet.getAccountInfo).toBe('function')
+            expect(typeof container.wallet.validateAddress).toBe('function')
             break
           case 'fiat':
             expect(typeof container.fiat.getWallets).toBe('function')
             expect(typeof container.fiat.formatMoney).toBe('function')
             break
-          case 'stellar':
-            expect(typeof container.stellar.getAccountInfo).toBe('function')
-            expect(typeof container.stellar.validateAddress).toBe('function')
+          case 'pricing':
+            expect(typeof container.pricing.getAssets).toBe('function')
+            expect(typeof container.pricing.formatAsset).toBe('function')
             break
         }
       }

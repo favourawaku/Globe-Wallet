@@ -5,6 +5,7 @@
 
 export type AssetCode = "XLM" | "USDC" | "USDT" | "NGN" | "USD" | "EUR";
 export type CurrencyCode = "NGN" | "USD" | "EUR" | "GBP";
+export type TransactionDirection = "in" | "out";
 
 export type TransactionCategory =
   | "payment"
@@ -29,12 +30,13 @@ export interface StellarAccount {
 export interface Wallet {
   id: string;
   name: string;
+  /** Display label; defaults to `name` in UI helpers */
+  label?: string;
   code: CurrencyCode;
   balance: number;
   color: string;
   /** Weekly change percentage, optional legacy field */
   changePct?: number;
-  label?: string;
   symbol?: string;
 }
 
@@ -44,9 +46,9 @@ export interface CryptoAsset {
   balance: number;
   priceUsd: number;
   change24h: number;
-  color: string;
-  /** Percentage change, alias for compatibility with older components */
+  /** UI alias for 24h change percentage */
   changePct?: number;
+  color: string;
 }
 
 export interface Contact {
@@ -314,6 +316,18 @@ export interface IFiatService {
   getAccountBalance(): number;
 }
 
+export interface MergeAnalyticsPayload {
+  event: "merge";
+  repository: string;
+  branch: string;
+  commit: string;
+  timestamp: string;
+  author: string;
+  issue: number;
+  status: "success" | "failure";
+  coverage_verified: boolean;
+}
+
 export interface IAssetService {
   getAssets(): CryptoAsset[];
   getAssetPrice(code: AssetCode): Promise<number>;
@@ -328,6 +342,36 @@ export interface IStellarService {
   shortenKey(key: string, lead?: number, tail?: number): string;
   getOffRampMethods(): OffRampMethod[];
   getOffRampRate(currency: CurrencyCode): number;
+}
+
+// ── Onboarding Types (Issue #29) ─────────────────────────────────────────────
+
+/** Tracks completion of developer onboarding steps for new contributors. */
+export interface OnboardingChecklist {
+  /** Developer's name or GitHub handle */
+  developer: string;
+  /** Steps the developer has completed */
+  completedSteps: OnboardingStep[];
+  /** ISO timestamp of when onboarding was started */
+  startedAt: string;
+  /** ISO timestamp of when all steps were completed, if applicable */
+  completedAt?: string;
+}
+
+export type OnboardingStep =
+  | "repo-cloned"
+  | "env-configured"
+  | "dev-server-started"
+  | "tests-run"
+  | "first-pr-opened"
+  | "docs-read";
+
+/** Lightweight profile used to personalise the onboarding experience. */
+export interface DeveloperProfile {
+  handle: string;
+  role: "frontend" | "backend" | "fullstack" | "qa" | "devops";
+  /** Whether the developer prefers to see advanced architecture notes */
+  advancedMode: boolean;
 }
 
 // ── Container Interface ──────────────────────────────────────────────────────

@@ -75,8 +75,10 @@ export const cryptoAssets: CryptoAsset[] = [
   },
 ]
 
+export const TEST_STELLAR_ADDRESS = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'
+
 export const stellarAccount = {
-  publicKey: "GDXSPAYWALLET7QK3MUKXHV2RZ4D6FJ5N2YHV3K2L9P8QW1ZC4T6BNRX",
+  publicKey: TEST_STELLAR_ADDRESS,
   memo: "STLP-2048",
   network: "Stellar Public Network",
 }
