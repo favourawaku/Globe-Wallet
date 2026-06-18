@@ -2,6 +2,8 @@ import fc from 'fast-check'
 import { WalletService } from '../../lib/services/wallet.service'
 import { PricingService } from '../../lib/services/pricing.service'
 import { FiatService } from '../../lib/services/fiat.service'
+import { StellarService } from '../../lib/services/stellar.service'
+import { AssetCode, CurrencyCode } from '../../lib/types'
 import { FinanceServiceContainer } from '../../lib/services/container'
 import { TEST_STELLAR_ADDRESS } from '../../lib/finance-data'
 
@@ -34,6 +36,10 @@ describe('Type System Correctness Properties', () => {
         const assetFormatted = pricingService.formatAsset(amount, assetCode as any)
         const fiatFormatted = fiatService.formatMoney(amount, currencyCode as any)
 
+        // Test formatted outputs are strings
+        const assetFormatted = assetService.formatAsset(amount, assetCode as AssetCode)
+        const fiatFormatted = fiatService.formatMoney(amount, currencyCode as CurrencyCode)
+        
         expect(typeof assetFormatted).toBe('string')
         expect(typeof fiatFormatted).toBe('string')
       }
@@ -66,17 +72,31 @@ describe('Type System Correctness Properties', () => {
 
   it('Property 5: Conversion operations maintain numerical integrity', () => {
     fc.assert(fc.property(
-      fc.constantFrom('NGN', 'USD', 'GBP'),
-      fc.double({ min: 0.01, max: 1000, noNaN: true }),
-      (toCurrency, amount) => {
-        if (toCurrency !== 'USD') {
-          const converted = fiatService.convertCurrency('USD', toCurrency as any, amount)
+      fc.constantFrom('XLM', 'USDC', 'USDT'),
+      fc.constantFrom('NGN', 'USD', 'GBP'), 
+      fc.float({ min: 0.01, max: 1000, noNaN: true }),
+      (fromAsset, toCurrency, amount) => {
+        // Asset conversions should return valid numbers
+        if (fromAsset !== 'XLM') { // Avoid same-asset conversion
+          const converted = assetService.convertAsset(fromAsset as AssetCode, 'XLM', amount)
           expect(typeof converted).toBe('number')
           expect(converted).toBeGreaterThan(0)
           expect(Number.isFinite(converted)).toBe(true)
         }
 
-        expect(walletService.validateAddress(TEST_STELLAR_ADDRESS)).toBe(true)
+        // Fiat conversions should return valid numbers
+        if (toCurrency !== 'USD') { // Avoid same-currency conversion
+          const converted = fiatService.convertCurrency('USD', toCurrency as CurrencyCode, amount)
+          expect(typeof converted).toBe('number')
+          expect(converted).toBeGreaterThan(0)
+          expect(Number.isFinite(converted)).toBe(true)
+        }
+
+        // Exchange rates should be positive numbers
+        const rate = fiatService.getExchangeRate('USD', toCurrency as CurrencyCode)
+        expect(typeof rate).toBe('number')
+        expect(rate).toBeGreaterThan(0)
+        expect(Number.isFinite(rate)).toBe(true)
       }
     ), { numRuns: 100 })
   })

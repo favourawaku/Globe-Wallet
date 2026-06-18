@@ -3,7 +3,12 @@ import { stellarAccount, offRampMethods, offRampRates, shortenKey } from '../fin
 
 export class StellarService implements IStellarService {
   getAccountInfo(): StellarAccount {
-    return { ...stellarAccount }
+    return { 
+      ...stellarAccount,
+      name: 'Primary Wallet',
+      network: stellarAccount.network || 'Stellar Public Network',
+      isFunded: true
+    }
   }
 
   generateReceiveAddress(): string {
@@ -28,7 +33,38 @@ export class StellarService implements IStellarService {
   }
 
   getOffRampMethods(): OffRampMethod[] {
-    return [...offRampMethods]
+    return [
+      {
+        id: 'm1',
+        name: 'Bank Transfer (NGN)',
+        description: 'Withdraw to any Nigerian bank account',
+        currency: 'NGN',
+        minAmount: 1000,
+        maxAmount: 5000000,
+        processingTime: 'Instant - 1 hour',
+        fee: 100
+      },
+      {
+        id: 'm2',
+        name: 'SEPA Transfer (EUR)',
+        description: 'Withdraw to European bank account',
+        currency: 'EUR',
+        minAmount: 10,
+        maxAmount: 50000,
+        processingTime: '1 - 2 business days',
+        fee: 1.5
+      },
+      {
+        id: 'm3',
+        name: 'ACH Transfer (USD)',
+        description: 'Withdraw to US bank account',
+        currency: 'USD',
+        minAmount: 20,
+        maxAmount: 100000,
+        processingTime: '2 - 3 business days',
+        fee: 2.0
+      }
+    ]
   }
 
   getOffRampRate(currency: CurrencyCode): number {

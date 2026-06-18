@@ -11,19 +11,21 @@ import {
   Banknote,
   type LucideIcon,
 } from "lucide-react"
-import { useTransactions } from "@/hooks/useTransactions"
-import { Transaction, TransactionCategory } from "@/lib/types"
-import { getTransactionDirection, getTransactionDisplayName, getTransactionDetail } from "@/lib/transaction-utils"
+import { transactions, formatMoney } from "@/lib/finance-data"
+import type { Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const categoryIcon: Record<TransactionCategory, LucideIcon> = {
+const categoryIcon: Record<string, LucideIcon> = {
   transfer: ArrowUpRight,
   airtime: Smartphone,
   bills: ReceiptText,
   savings: PiggyBank,
   card: CreditCard,
   deposit: Banknote,
+  payment: ArrowUpRight,
+  exchange: ArrowUpRight,
+  withdrawal: ArrowUpRight,
 }
 
 interface TransactionListProps {
@@ -70,42 +72,40 @@ export function TransactionList({ limit }: TransactionListProps) {
   }
 
   return (
-    <ul className="divide-y divide-border" data-testid="transaction-list" aria-label="Recent transactions">
+    <ul className="divide-y divide-border" role="list" data-testid="transaction-list">
       {items.map((tx) => {
-        const direction = getTransactionDirection(tx)
-        const category = tx.category ?? "transfer"
-        const Icon = direction === "in" ? ArrowDownLeft : categoryIcon[category]
-        const name = getTransactionDisplayName(tx)
-        const detail = getTransactionDetail(tx)
-
+        const isIncoming = (tx.type as string) === "in" || (tx.type as string) === "receive" || (tx.type as string) === "deposit"
+        const Icon = isIncoming ? ArrowDownLeft : (tx.category ? categoryIcon[tx.category] : ArrowUpRight) || ArrowUpRight
+        
         return (
           <li
             key={tx.id}
             className="flex items-center gap-3 py-3"
+            role="listitem"
             data-testid={`transaction-${tx.id}`}
           >
             <span
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                direction === "in" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground",
+                isIncoming ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground",
               )}
               aria-hidden
             >
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{name}</p>
-              <p className="truncate text-xs text-muted-foreground">{detail}</p>
+              <p className="truncate text-sm font-medium text-foreground">{tx.name || "Transaction"}</p>
+              <p className="truncate text-xs text-muted-foreground">{tx.detail || tx.address || ""}</p>
             </div>
             <div className="text-right">
               <p
                 className={cn(
                   "text-sm font-semibold",
-                  direction === "in" ? "text-primary" : "text-foreground",
+                  isIncoming ? "text-primary" : "text-foreground",
                 )}
               >
-                {direction === "in" ? "+" : "-"}
-                {formatTransactionAmount(tx)}
+                {isIncoming ? "+" : "-"}
+                {formatMoney(tx.amount, tx.currency || "USD")}
               </p>
               <p className="text-[11px] text-muted-foreground">{tx.date}</p>
             </div>

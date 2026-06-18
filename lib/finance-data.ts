@@ -6,42 +6,9 @@
 import { CurrencyCode, AssetCode, Wallet, CryptoAsset, Transaction, Contact, SavingsGoal, PaymentCard } from './types'
 
 export const wallets: Wallet[] = [
-  { id: 'w1', code: "NGN", name: "Nigerian Naira", label: "Naira", balance: 1284500.75, color: "bg-green-500", symbol: "₦", changePct: 2.4 },
-  { id: 'w2', code: "USD", name: "US Dollar", label: "Dollar", balance: 4820.4, color: "bg-blue-500", symbol: "$", changePct: 1.1 },
-  { id: 'w3', code: "GBP", name: "British Pound", label: "Pound", balance: 1290.0, color: "bg-indigo-500", symbol: "£", changePct: -0.6 },
-]
-
-export const savingsGoals: SavingsGoal[] = [
-  { id: 'sg1', title: 'Emergency fund', saved: 320000, target: 500000, currency: 'NGN', apy: 8.5, color: 'bg-primary' },
-  { id: 'sg2', title: 'Travel', saved: 1500, target: 3000, currency: 'USD', apy: 6.0, color: 'bg-accent' },
-  { id: 'sg3', title: 'New laptop', saved: 540, target: 1200, currency: 'USD', apy: 5.5, color: 'bg-indigo-500' },
-]
-
-export const cards: PaymentCard[] = [
-  {
-    id: 'c1',
-    label: 'Globe Virtual',
-    type: 'virtual',
-    brand: 'Visa',
-    last4: '4291',
-    expiry: '09/28',
-    balance: 8420,
-    currency: 'USD',
-    frozen: false,
-    gradient: 'from-indigo-600 to-violet-700',
-  },
-  {
-    id: 'c2',
-    label: 'Globe Physical',
-    type: 'physical',
-    brand: 'Mastercard',
-    last4: '8834',
-    expiry: '03/27',
-    balance: 215000,
-    currency: 'NGN',
-    frozen: false,
-    gradient: 'from-emerald-600 to-teal-700',
-  },
+  { id: 'w1', code: "NGN", name: "Nigerian Naira", balance: 1284500.75, color: "bg-green-500", changePct: 2.4, label: "NGN" },
+  { id: 'w2', code: "USD", name: "US Dollar", balance: 4820.4, color: "bg-blue-500", changePct: -1.2, label: "USD" },
+  { id: 'w3', code: "GBP", name: "British Pound", balance: 1290.0, color: "bg-indigo-500", changePct: 0.5, label: "GBP" },
 ]
 
 export const transactions: Transaction[] = [
@@ -53,10 +20,10 @@ export const transactions: Transaction[] = [
     address: "GDXSPAY...",
     date: "Today, 09:42",
     status: "completed",
-    name: "Adaeze Okoro",
-    detail: "Transfer from @adaeze",
-    category: "transfer",
-    currency: "NGN",
+    category: "deposit",
+    name: "Received XLM",
+    detail: "From external address",
+    currency: "USD"
   },
   {
     id: "t2",
@@ -66,37 +33,11 @@ export const transactions: Transaction[] = [
     address: "GDXSPAY...",
     date: "Today, 08:15",
     status: "completed",
-    name: "MTN Airtime",
-    detail: "Mobile top-up",
-    category: "airtime",
-    currency: "NGN",
-  },
-  {
-    id: "t3",
-    type: "send",
-    amount: 150,
-    asset: "USDC",
-    address: "GABC...XYZ1",
-    date: "Yesterday",
-    status: "completed",
-    name: "Netflix",
-    detail: "Subscription",
-    category: "bills",
-    currency: "USD",
-  },
-  {
-    id: "t4",
-    type: "receive",
-    amount: 500,
-    asset: "USDC",
-    address: "GDXSPAY...",
-    date: "Yesterday",
-    status: "completed",
-    name: "Salary deposit",
-    detail: "Monthly payroll",
-    category: "deposit",
-    currency: "USD",
-  },
+    category: "transfer",
+    name: "Sent XLM",
+    detail: "To Stellar account",
+    currency: "USD"
+  }
 ]
 
 export const contacts: Contact[] = [
@@ -150,12 +91,108 @@ export const formatMoney = (amount: number, currency: CurrencyCode, hidden = fal
 
 export const formatCrypto = (amount: number, code: AssetCode, hidden = false): string => {
   if (hidden) return `•••• ${code}`
+  const decimals = code === "XLM" ? 4 : 2
   return `${amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: code === "XLM" ? 4 : 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   })} ${code}`
 }
 
 export function shortenKey(key: string, lead = 6, tail = 6): string {
   return `${key.slice(0, lead)}…${key.slice(-tail)}`
 }
+
+export const savingsGoals: SavingsGoal[] = [
+  {
+    id: "s1",
+    title: "New Laptop",
+    saved: 320000,
+    target: 850000,
+    currency: "NGN",
+    apy: 12,
+    color: "bg-primary",
+  },
+  {
+    id: "s2",
+    title: "Emergency Fund",
+    saved: 1500,
+    target: 5000,
+    currency: "USD",
+    apy: 8,
+    color: "bg-accent",
+  },
+  {
+    id: "s3",
+    title: "Japa Travel",
+    saved: 540,
+    target: 2000,
+    currency: "GBP",
+    apy: 6,
+    color: "bg-chart-3",
+  },
+]
+
+export const cards: PaymentCard[] = [
+  {
+    id: "card1",
+    label: "Spending Card",
+    type: "physical",
+    brand: "Mastercard",
+    last4: "4821",
+    expiry: "09/27",
+    balance: 1284500.75,
+    currency: "NGN",
+    frozen: false,
+    gradient: "from-primary to-accent",
+  },
+  {
+    id: "card2",
+    label: "Online USD Card",
+    type: "virtual",
+    brand: "Visa",
+    last4: "7390",
+    expiry: "04/26",
+    balance: 4820.4,
+    currency: "USD",
+    frozen: false,
+    gradient: "from-foreground to-muted-foreground",
+  },
+]
+
+export const quickActions = [
+  { id: "send", label: "Send", icon: "send" },
+  { id: "request", label: "Request", icon: "request" },
+  { id: "airtime", label: "Airtime", icon: "airtime" },
+  { id: "bills", label: "Bills", icon: "bills" },
+] as const
+
+export const conversionRates: Record<AssetCode, Record<AssetCode, number>> = {
+  XLM: { XLM: 1, USDC: 0.1185, USDT: 0.1184, NGN: 177.75, USD: 0.1185, EUR: 0.109 },
+  USDC: { XLM: 8.4388, USDC: 1, USDT: 0.9994, NGN: 1500.0, USD: 1.0, EUR: 0.92 },
+  USDT: { XLM: 8.4459, USDC: 1.0006, USDT: 1, NGN: 1500.0, USD: 1.0, EUR: 0.92 },
+  NGN: { XLM: 0.00562, USDC: 0.00067, USDT: 0.00067, NGN: 1, USD: 0.00067, EUR: 0.00061 },
+  USD: { XLM: 8.4388, USDC: 1, USDT: 0.9994, NGN: 1500.0, USD: 1.0, EUR: 0.92 },
+  EUR: { XLM: 9.1743, USDC: 1.087, USDT: 1.087, NGN: 1630.0, USD: 1.087, EUR: 1.0 }
+}
+
+export interface LegacyOffRampMethod {
+  id: string
+  type: "bank" | "mobile"
+  label: string
+  detail: string
+  initials: string
+}
+
+export const offRampMethods: LegacyOffRampMethod[] = [
+  { id: "m1", type: "bank", label: "GTBank • Savings", detail: "•••• 8842", initials: "GT" },
+  { id: "m2", type: "bank", label: "Access Bank • Current", detail: "•••• 1129", initials: "AC" },
+  { id: "m3", type: "mobile", label: "Opay Wallet", detail: "+234 803 •••• 21", initials: "OP" },
+]
+
+export const offRampRates: Record<CurrencyCode, number> = {
+  NGN: 1580.5,
+  USD: 1,
+  GBP: 0.79,
+  EUR: 0.92
+}
+

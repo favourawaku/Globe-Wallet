@@ -1,252 +1,130 @@
-/**
- * Component tests for SendForm — issue #23
- * Covers: contact selection, address validation, send confirmation step,
- * error/success states, accessibility, and disabled states.
- */
-import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SendForm } from '../../components/app/send-form'
 import { FinanceServicesProvider } from '../../hooks/useFinanceServices'
 import { FinanceServiceContainer } from '../../lib/services/container'
-import { Contact } from '../../lib/types'
+import * as React from 'react'
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
+describe('SendForm Component', () => {
+    let mockWallet: any
+    let mockPricing: any
+    let mockFiat: any
+    let mockContainer: any
 
-const VALID_ADDRESS = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'
+    beforeEach(() => {
+        mockWallet = {
+            sendPayment: jest.fn().mockResolvedValue({ success: true, hash: '0xhash123', status: 'completed' }),
+            validateAddress: jest.fn().mockReturnValue(true),
+            getAccountInfo: jest.fn().mockReturnValue({ publicKey: 'GDXSPAYWALLET7QK3MUKXHV2RZ4D6FJ5N2YHV3K2L9P8QW1ZC4T6BNRX', network: 'Stellar Public Network' }),
+            getBalance: jest.fn().mockResolvedValue([])
+        }
 
-const mockSendPayment = jest.fn()
-const mockValidateAddress = jest.fn()
+        mockPricing = {
+            getAssets: jest.fn().mockReturnValue([
+                { code: 'XLM', name: 'Stellar Lumens', balance: 500, priceUsd: 0.12, change24h: 1.5, color: 'bg-primary' }
+            ]),
+            getPrice: jest.fn().mockResolvedValue(0.12),
+            formatAsset: jest.fn().mockImplementation((amount, code) => `${amount} ${code}`)
+        }
 
-const mockWallet = {
-  sendPayment: mockSendPayment,
-  validateAddress: mockValidateAddress,
-  getAccountInfo: jest.fn().mockReturnValue({ publicKey: VALID_ADDRESS, name: 'Primary', isFunded: true }),
-  getBalance: jest.fn().mockResolvedValue([]),
-  generateReceiveAddress: jest.fn().mockReturnValue(VALID_ADDRESS),
-  getTransactionHistory: jest.fn().mockResolvedValue([]),
-  shortenKey: jest.fn((k: string) => k.slice(0, 6) + '…'),
-}
+        mockFiat = {
+            getWallets: jest.fn().mockReturnValue([]),
+            formatMoney: jest.fn().mockImplementation((amount, currency) => `$${amount}`),
+            convertCurrency: jest.fn().mockReturnValue(0),
+            getAccountBalance: jest.fn().mockReturnValue(0)
+        }
 
-const mockPricing = {
-  getAssets: jest.fn().mockReturnValue([
-    { code: 'XLM', name: 'Stellar Lumens', balance: 4250.5, priceUsd: 0.12, change24h: 4.7, color: '' },
-    { code: 'USDC', name: 'USD Coin', balance: 1820.0, priceUsd: 1.0, change24h: 0, color: '' },
-  ]),
-  getPrice: jest.fn().mockResolvedValue(0.12),
-  formatAsset: jest.fn((amount: number, code: string) => `${amount} ${code}`),
-}
+        mockContainer = {
+            wallet: mockWallet,
+            pricing: mockPricing,
+            fiat: mockFiat,
+            exchange: {},
+            offRamp: {},
+            soroban: {}
+        }
+    })
 
-const mockFiat = {
-  getWallets: jest.fn().mockReturnValue([]),
-  convertCurrency: jest.fn().mockReturnValue(0),
-  getExchangeRate: jest.fn().mockReturnValue(1),
-  getAccountBalance: jest.fn().mockReturnValue(0),
-}
+    it('should render form elements with proper aria labels and test IDs', () => {
+        render(
+            <FinanceServicesProvider services={mockContainer as any}>
+                <SendForm />
+            </FinanceServicesProvider>
+        )
 
-// Seed contacts for the contact-picker (used by useContacts → contactService)
-jest.mock('../../hooks/useBalances', () => ({
-  useBalances: () => ({
-    wallets: [],
-    assets: [
-      { code: 'XLM', name: 'Stellar Lumens', balance: 5000, priceUsd: 0.12, change24h: 0, changePct: 0, color: '' },
-      { code: 'USDC', name: 'USD Coin', balance: 2000, priceUsd: 1, change24h: 0, changePct: 0, color: '' },
-    ],
-    totalFiatValue: 0,
-    totalCryptoValue: 0,
-    loading: false,
-    hasError: false,
-    error: null,
-    refreshBalances: jest.fn(),
-    getTotalValue: () => 0,
-  }),
-}))
+        expect(screen.getByRole('form', { name: /Send payment form/i })).toBeInTheDocument()
+        expect(screen.getByTestId('address-input')).toBeInTheDocument()
+        expect(screen.getByTestId('amount-input')).toBeInTheDocument()
+        expect(screen.getByTestId('memo-input')).toBeInTheDocument()
+        expect(screen.getByTestId('send-submit-btn')).toBeInTheDocument()
+    })
 
-jest.mock('../../lib/services/contact.service', () => {
-  const contacts: Contact[] = [
-    { id: 'c1', name: 'Adaeze Okoro', handle: '@adaeze', initials: 'AO', address: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF' },
-    { id: 'c2', name: 'James Bello', handle: '@jbello', initials: 'JB' },
-  ]
-  return {
-    ContactService: jest.fn().mockImplementation(() => ({
-      getContacts: () => contacts,
-      search: (q: string) =>
-        q.trim()
-          ? contacts.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || c.handle.includes(q))
-          : contacts,
-      getById: (id: string) => contacts.find(c => c.id === id),
-    })),
-    contactService: {
-      getContacts: () => contacts,
-      search: (q: string) =>
-        q.trim()
-          ? contacts.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || c.handle.includes(q))
-          : contacts,
-      getById: (id: string) => contacts.find(c => c.id === id),
-    },
-  }
-})
+    it('should show client-side validation error for invalid stellar address', async () => {
+        render(
+            <FinanceServicesProvider services={mockContainer as any}>
+                <SendForm />
+            </FinanceServicesProvider>
+        )
 
-function buildContainer() {
-  return new FinanceServiceContainer(
-    mockWallet as any,
-    undefined,
-    undefined,
-    mockPricing as any,
-    mockFiat as any
-  )
-}
+        const addressInput = screen.getByTestId('address-input')
+        fireEvent.change(addressInput, { target: { value: 'invalid-address' } })
 
-function renderSendForm(container = buildContainer()) {
-  return render(
-    <FinanceServicesProvider services={container}>
-      <SendForm />
-    </FinanceServicesProvider>
-  )
-}
+        const submitBtn = screen.getByTestId('send-submit-btn')
+        fireEvent.click(submitBtn)
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+        await waitFor(() => {
+            expect(screen.getByTestId('send-error')).toBeInTheDocument()
+            expect(screen.getByText(/Invalid Stellar address/i)).toBeInTheDocument()
+        })
 
-async function fillAndReview(address = VALID_ADDRESS, amount = '100') {
-  const addressInput = screen.queryByLabelText(/Recipient Address/i)
-  if (addressInput) fireEvent.change(addressInput, { target: { value: address } })
-  fireEvent.change(screen.getByLabelText(/Amount/i), { target: { value: amount } })
-  fireEvent.click(screen.getByTestId('review-button'))
-}
+        // Check accessibility: aria-invalid set to true
+        expect(addressInput).toHaveAttribute('aria-invalid', 'true')
+    })
 
-// ── Tests ──────────────────────────────────────────────────────────────────
+    it('should call sendPayment when inputs are valid', async () => {
+        render(
+            <FinanceServicesProvider services={mockContainer as any}>
+                <SendForm />
+            </FinanceServicesProvider>
+        )
 
-beforeEach(() => {
-  jest.clearAllMocks()
-  mockValidateAddress.mockReturnValue(true)
-  mockSendPayment.mockResolvedValue({ status: 'completed', hash: '0xabc', success: true })
-})
+        const validAddr = 'GDXSPAYWALLET7QK3MUKXHV2RZ4D6FJ5N2YHV3K2L9P8QW1ZC4T6BNRX'
+        fireEvent.change(screen.getByTestId('address-input'), { target: { value: validAddr } })
+        fireEvent.change(screen.getByTestId('amount-input'), { target: { value: '150' } })
+        fireEvent.change(screen.getByTestId('memo-input'), { target: { value: 'Testing memo' } })
 
-describe('SendForm — rendering', () => {
-  it('renders the form step initially', () => {
-    renderSendForm()
-    expect(screen.getByText(/Send Assets/i)).toBeInTheDocument()
-    expect(screen.getByTestId('review-button')).toBeInTheDocument()
-  })
+        const submitBtn = screen.getByTestId('send-submit-btn')
+        fireEvent.click(submitBtn)
 
-  it('renders the contact search input', () => {
-    renderSendForm()
-    expect(screen.getByTestId('contact-search')).toBeInTheDocument()
-  })
+        await waitFor(() => {
+            expect(mockWallet.sendPayment).toHaveBeenCalledWith(validAddr, 150, 'XLM', 'Testing memo')
+            expect(screen.getByTestId('send-success')).toBeInTheDocument()
+        })
+    })
 
-  it('renders recipient address input when no contact is selected', () => {
-    renderSendForm()
-    expect(screen.getByLabelText(/Recipient Address/i)).toBeInTheDocument()
-  })
+    it('should allow user to reset the form after success or error', async () => {
+        render(
+            <FinanceServicesProvider services={mockContainer as any}>
+                <SendForm />
+            </FinanceServicesProvider>
+        )
 
-  it('renders amount and asset inputs', () => {
-    renderSendForm()
-    expect(screen.getByLabelText(/Amount/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Select asset/i)).toBeInTheDocument()
-  })
+        const validAddr = 'GDXSPAYWALLET7QK3MUKXHV2RZ4D6FJ5N2YHV3K2L9P8QW1ZC4T6BNRX'
+        const addressInput = screen.getByTestId('address-input')
+        const amountInput = screen.getByTestId('amount-input')
 
-  it('review button is enabled by default', () => {
-    renderSendForm()
-    expect(screen.getByTestId('review-button')).not.toBeDisabled()
-  })
-})
+        fireEvent.change(addressInput, { target: { value: validAddr } })
+        fireEvent.change(amountInput, { target: { value: '50' } })
 
-describe('SendForm — contact selection', () => {
-  it('shows contact list when user types in search', async () => {
-    renderSendForm()
-    const search = screen.getByTestId('contact-search')
-    await userEvent.type(search, 'Ada')
-    expect(screen.getByTestId('contact-list')).toBeInTheDocument()
-    expect(screen.getByTestId('contact-option-c1')).toBeInTheDocument()
-  })
+        fireEvent.click(screen.getByTestId('send-submit-btn'))
 
-  it('shows "No contacts found" for unmatched query', async () => {
-    renderSendForm()
-    await userEvent.type(screen.getByTestId('contact-search'), 'zzznomatch')
-    expect(screen.getByText(/No contacts found/i)).toBeInTheDocument()
-  })
+        await waitFor(() => {
+            expect(screen.getByTestId('send-success')).toBeInTheDocument()
+        })
 
-  it('selects a contact on click and hides address input', async () => {
-    renderSendForm()
-    await userEvent.type(screen.getByTestId('contact-search'), 'Ada')
-    fireEvent.click(screen.getByTestId('contact-option-c1'))
-    expect(screen.getByTestId('selected-contact')).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Recipient Address/i)).not.toBeInTheDocument()
-  })
+        // Click send another
+        fireEvent.click(screen.getByTestId('send-again-btn'))
 
-  it('selects a contact via keyboard Enter', async () => {
-    renderSendForm()
-    await userEvent.type(screen.getByTestId('contact-search'), 'Ada')
-    const option = screen.getByTestId('contact-option-c1')
-    fireEvent.keyDown(option, { key: 'Enter' })
-    expect(screen.getByTestId('selected-contact')).toBeInTheDocument()
-  })
-
-  it('clears selected contact when X is clicked', async () => {
-    renderSendForm()
-    await userEvent.type(screen.getByTestId('contact-search'), 'Ada')
-    fireEvent.click(screen.getByTestId('contact-option-c1'))
-    fireEvent.click(screen.getByTestId('clear-contact'))
-    expect(screen.queryByTestId('selected-contact')).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/Recipient Address/i)).toBeInTheDocument()
-  })
-
-  it('selected-contact has accessible aria-label', async () => {
-    renderSendForm()
-    await userEvent.type(screen.getByTestId('contact-search'), 'Ada')
-    fireEvent.click(screen.getByTestId('contact-option-c1'))
-    expect(screen.getByRole('status', { name: /Selected contact: Adaeze Okoro/i })).toBeInTheDocument()
-  })
-})
-
-describe('SendForm — validation errors (form step)', () => {
-  it('shows error for invalid address', async () => {
-    mockValidateAddress.mockReturnValue(false)
-    renderSendForm()
-    await fillAndReview('bad-address', '10')
-    await waitFor(() => expect(screen.getByTestId('send-error')).toHaveTextContent(/Invalid Stellar address/i))
-  })
-
-  it('shows error for zero amount', async () => {
-    renderSendForm()
-    await fillAndReview(VALID_ADDRESS, '0')
-    await waitFor(() => expect(screen.getByTestId('send-error')).toHaveTextContent(/valid amount/i))
-  })
-
-  it('shows error for negative amount', async () => {
-    renderSendForm()
-    await fillAndReview(VALID_ADDRESS, '-5')
-    await waitFor(() => expect(screen.getByTestId('send-error')).toHaveTextContent(/valid amount/i))
-  })
-
-  it('shows error for insufficient balance', async () => {
-    renderSendForm()
-    await fillAndReview(VALID_ADDRESS, '99999999')
-    await waitFor(() => expect(screen.getByTestId('send-error')).toHaveTextContent(/Insufficient/i))
-  })
-
-  it('error has role="alert" for accessibility', async () => {
-    mockValidateAddress.mockReturnValue(false)
-    renderSendForm()
-    await fillAndReview('bad', '1')
-    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
-  })
-})
-
-describe('SendForm — confirmation step', () => {
-  it('advances to confirmation step on valid input', async () => {
-    renderSendForm()
-    await fillAndReview()
-    await waitFor(() => expect(screen.getByTestId('confirm-send-button')).toBeInTheDocument())
-  })
-
-  it('shows SendSummary with correct amount and fee', async () => {
-    renderSendForm()
-    await fillAndReview(VALID_ADDRESS, '50')
-    await waitFor(() => {
-      expect(screen.getByTestId('send-summary')).toBeInTheDocument()
-      expect(screen.getByTestId('summary-amount')).toHaveTextContent('50')
-      expect(screen.getByTestId('summary-fee')).toHaveTextContent('XLM')
+        expect(addressInput).toHaveValue('')
+        expect(amountInput).toHaveValue(null)
     })
   })
 

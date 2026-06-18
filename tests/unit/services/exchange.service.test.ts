@@ -11,8 +11,8 @@ describe('ExchangeService', () => {
         it('should provide estimate for a valid swap', async () => {
             const estimate = await service.estimateSwap('XLM', 'USDC', 100)
             expect(estimate.fromAmount).toBe(100)
-            expect(estimate.toAmount).toBeLessThan(100)
-            expect(estimate.priceImpact).toBeDefined()
+            expect(estimate.toAmount).toBeLessThan(100) // Since XLM < USDC
+            expect(estimate.priceImpact).toBe(0.02)
         })
     })
 

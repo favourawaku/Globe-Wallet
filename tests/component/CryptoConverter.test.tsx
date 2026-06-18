@@ -24,9 +24,12 @@ const mockPricing = {
 
 const mockServices = new FinanceServiceContainer(
   undefined,
-  mockExchange as any,
   undefined,
-  mockPricing as any,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  mockAssetService as any
 )
 
 const renderWithServices = (component: React.ReactNode) => {
@@ -91,7 +94,45 @@ describe('CryptoConverter', () => {
 
   it('should disable convert button when invalid input', () => {
     renderWithServices(<CryptoConverter />)
-    expect(screen.getByTestId('convert-button')).toBeDisabled()
+
+    const convertButton = screen.getByTestId('convert-button')
+    expect(convertButton).toBeDisabled()
+  })
+
+  it('should handle conversion errors', async () => {
+    const user = userEvent.setup()
+    const errorService = {
+      ...mockAssetService,
+      convertAsset: jest.fn().mockImplementation(() => {
+        throw new Error('Conversion failed')
+      })
+    }
+
+    const errorServices = new FinanceServiceContainer(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      errorService as any
+    )
+
+    render(
+      <FinanceServicesProvider services={errorServices}>
+        <CryptoConverter />
+      </FinanceServicesProvider>
+    )
+
+    const amountInput = screen.getByTestId('amount-input')
+    const convertButton = screen.getByTestId('convert-button')
+
+    await user.type(amountInput, '100')
+    await user.click(convertButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('converter-error')).toBeInTheDocument()
+    })
   })
 
   it('should have proper accessibility attributes', () => {

@@ -1,6 +1,6 @@
 /**
- * Level 2 Architecture Sync: Enterprise Interfaces
- * Consolidated and synced with architecture.md and issue-27.md
+ * Issue #18 Enterprise Upgrade — Type System
+ * Expanded and synced with architecture.md, issue-18.md, and all service layers.
  */
 
 export type AssetCode = 'XLM' | 'USDC' | 'USDT' | 'NGN' | 'USD' | 'EUR'
@@ -8,9 +8,14 @@ export type CurrencyCode = 'NGN' | 'USD' | 'EUR' | 'GBP'
 export type TransactionCategory = 'transfer' | 'airtime' | 'bills' | 'savings' | 'card' | 'deposit'
 export type TransactionDirection = 'in' | 'out'
 
+export type TransactionCategory = 'payment' | 'exchange' | 'withdrawal' | 'deposit' | 'transfer' | 'airtime' | 'bills' | 'savings' | 'card'
+
+// ── Domain Models ───────────────────────────────────────────────────────────
+
 export interface StellarAccount {
   publicKey: string
   name: string
+  network: string
   isFunded: boolean
 }
 
@@ -22,8 +27,10 @@ export interface Wallet {
   code: CurrencyCode
   balance: number
   color: string
-  symbol?: string
+  /** Weekly change percentage, optional legacy field */
   changePct?: number
+  label?: string
+  symbol?: string
 }
 
 export interface CryptoAsset {
@@ -35,6 +42,8 @@ export interface CryptoAsset {
   /** UI alias for 24h change percentage */
   changePct?: number
   color: string
+  /** Percentage change, alias for compatibility with older components */
+  changePct?: number
 }
 
 export interface Contact {
@@ -92,8 +101,8 @@ export interface SavingsGoal {
 export interface PaymentCard {
   id: string
   label: string
-  type: "virtual" | "physical"
-  brand: "Visa" | "Mastercard"
+  type: 'virtual' | 'physical'
+  brand: 'Visa' | 'Mastercard'
   last4: string
   expiry: string
   balance: number
@@ -110,32 +119,22 @@ export interface Balance {
 
 export interface Transaction {
   id: string
-  type: 'send' | 'receive' | 'convert' | 'withdraw'
+  /** Crypto-style type used by WalletService */
+  type: 'send' | 'receive' | 'convert' | 'withdraw' | 'in' | 'out'
   amount: number
   asset: AssetCode
+  /** Fiat currency for the legacy TransactionList view */
+  currency?: CurrencyCode
   address: string
   date: string
   status: 'completed' | 'pending' | 'failed'
   stellarHash?: string
-  /** Human-readable counterparty or merchant name */
+  /** Categorisation for filtering and display */
+  category?: TransactionCategory
+  /** Human-readable display name for the transaction */
   name?: string
-  /** Secondary line (memo, category detail, shortened address) */
+  /** Additional transaction detail text */
   detail?: string
-  category?: TransactionCategory
-  /** Fiat display currency when amount is shown in local money */
-  currency?: CurrencyCode
-}
-
-export interface TransactionsQuery {
-  type?: TransactionDirection
-  category?: TransactionCategory
-  limit?: number
-}
-
-export interface TransactionsResponse {
-  success: boolean
-  data?: Transaction[]
-  error?: string
 }
 
 export interface SwapEstimate {
@@ -154,14 +153,79 @@ export interface TransactionResult {
   status?: 'completed' | 'pending' | 'failed'
 }
 
-export class StellarServiceError extends Error {
+export interface FeeEstimate {
+  base: number
+  network: number
+  total: number
+  asset: AssetCode
+  /** Estimated time in seconds */
+  estimatedSeconds: number
+}
+
+export interface OffRampMethod {
+  id: string
+  name: string
+  description: string
+  currency: CurrencyCode
+  minAmount: number
+  maxAmount: number
+  processingTime: string
+  fee: number
+}
+
+// ── Error Classes ────────────────────────────────────────────────────────────
+
+export class ServiceError extends Error {
   constructor(message: string, public readonly code?: string) {
     super(message)
+    this.name = 'ServiceError'
+  }
+}
+
+export class StellarServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
     this.name = 'StellarServiceError'
   }
 }
 
-// Service Interfaces
+export class WalletServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
+    this.name = 'WalletServiceError'
+  }
+}
+
+export class ExchangeServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
+    this.name = 'ExchangeServiceError'
+  }
+}
+
+export class OffRampServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
+    this.name = 'OffRampServiceError'
+  }
+}
+
+export class AssetServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
+    this.name = 'AssetServiceError'
+  }
+}
+
+export class FiatServiceError extends ServiceError {
+  constructor(message: string, code?: string) {
+    super(message, code)
+    this.name = 'FiatServiceError'
+  }
+}
+
+// ── Service Interfaces ───────────────────────────────────────────────────────
+
 export interface IWalletService {
   getAccountInfo(): StellarAccount
   getBalance(): Promise<Balance[]>
@@ -173,7 +237,7 @@ export interface IWalletService {
 }
 
 export interface IPricingService {
-  getAssets(): any[]
+  getAssets(): CryptoAsset[]
   getPrice(code: AssetCode): Promise<number>
   formatAsset(amount: number, code: AssetCode, hidden?: boolean): string
 }
@@ -186,6 +250,7 @@ export interface IExchangeService {
 export interface IOffRampService {
   initiateWithdrawal(amount: number, asset: AssetCode, methodId: string, currency: CurrencyCode): Promise<TransactionResult>
   getRates(): Promise<Record<string, number>>
+  getMethods(): OffRampMethod[]
 }
 
 export interface ISorobanService {
@@ -194,6 +259,9 @@ export interface ISorobanService {
 }
 
 export interface IFiatService {
+  getWallets(): Wallet[]
+  formatMoney(amount: number, currency: CurrencyCode, hidden?: boolean): string
+  convertCurrency(from: CurrencyCode, to: CurrencyCode, amount: number): number
   getAccountBalance(): number
   getWallets(): Wallet[]
   formatMoney(amount: number, currency: CurrencyCode, hidden?: boolean): string
@@ -212,7 +280,24 @@ export interface MergeAnalyticsPayload {
   coverage_verified: boolean
 }
 
-// Container Interface
+export interface IAssetService {
+  getAssets(): CryptoAsset[]
+  getAssetPrice(code: AssetCode): Promise<number>
+  formatAsset(amount: number, code: AssetCode, hidden?: boolean): string
+  convertAsset(from: AssetCode, to: AssetCode, amount: number): number
+}
+
+export interface IStellarService {
+  getAccountInfo(): StellarAccount
+  generateReceiveAddress(): string
+  validateAddress(address: string): boolean
+  shortenKey(key: string, lead?: number, tail?: number): string
+  getOffRampMethods(): OffRampMethod[]
+  getOffRampRate(currency: CurrencyCode): number
+}
+
+// ── Container Interface ──────────────────────────────────────────────────────
+
 export interface IFinanceServiceContainer {
   wallet: IWalletService
   pricing: IPricingService
@@ -220,4 +305,8 @@ export interface IFinanceServiceContainer {
   offRamp: IOffRampService
   fiat: IFiatService
   soroban: ISorobanService
+  
+  // Legacy compatibility
+  asset: IAssetService
+  stellar: IStellarService
 }

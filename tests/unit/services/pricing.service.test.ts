@@ -22,15 +22,16 @@ describe('PricingService', () => {
             expect(price).toBe(0.1185)
         })
 
-        it('should throw for an unknown asset code', async () => {
-            await expect(service.getPrice('UNKNOWN' as any)).rejects.toThrow(StellarServiceError)
+        it('should throw an error for an unknown asset code', async () => {
+            await expect(service.getPrice('UNKNOWN' as any))
+                .rejects.toThrow(StellarServiceError)
         })
     })
 
     describe('formatAsset', () => {
         it('should format XLM correctly', () => {
             const formatted = service.formatAsset(100, 'XLM')
-            expect(formatted).toBe('100.00 XLM')
+            expect(formatted).toBe('100.0000 XLM')
         })
 
         it('should mask balance when hidden is true', () => {

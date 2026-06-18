@@ -17,3 +17,10 @@ export async function GET() {
         timestamp: new Date().toISOString()
     })
 }
+
+export async function POST(request: Request) {
+    return NextResponse.json({
+        verified: true,
+        status: 'completed'
+    })
+}

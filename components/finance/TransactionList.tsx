@@ -36,7 +36,7 @@ export function TransactionList({ limit = 10, showFilters = true, className }: T
   useEffect(() => {
     const loadTransactions = async () => {
       try {
-        const data = await getTransactions(filter)
+        const data = await getTransactions(filter as any)
         setTransactions(data.slice(0, limit))
       } catch (err) {
         console.error('Failed to load transactions:', err)

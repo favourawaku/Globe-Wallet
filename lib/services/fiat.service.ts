@@ -1,4 +1,4 @@
-import { IFiatService, CurrencyCode, Wallet, StellarServiceError } from '../types'
+import { IFiatService, CurrencyCode, Wallet, FiatServiceError } from '../types'
 import { wallets, formatMoney } from '../finance-data'
 import { BaseService } from './base.service'
 
@@ -24,7 +24,7 @@ export class FiatService extends BaseService implements IFiatService {
 
   convertCurrency(from: CurrencyCode, to: CurrencyCode, amount: number): number {
     if (!this.exchangeRates[from] || !this.exchangeRates[from][to]) {
-      throw new StellarServiceError(`Exchange rate not available for ${from} to ${to}`)
+      throw new FiatServiceError(`Exchange rate not available for ${from} to ${to}`)
     }
 
     return amount * this.exchangeRates[from][to]
@@ -32,5 +32,12 @@ export class FiatService extends BaseService implements IFiatService {
 
   getAccountBalance(): number {
     return this.getWallets().reduce((total, w) => total + this.convertCurrency(w.code, 'USD', w.balance), 0)
+  }
+
+  getExchangeRate(from: CurrencyCode, to: CurrencyCode): number {
+    if (!this.exchangeRates[from] || !this.exchangeRates[from][to]) {
+      throw new FiatServiceError(`Exchange rate not available for ${from} to ${to}`)
+    }
+    return this.exchangeRates[from][to]
   }
 }
