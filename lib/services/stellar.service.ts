@@ -1,20 +1,26 @@
 import { IStellarService, StellarAccount, OffRampMethod, CurrencyCode, StellarServiceError } from '../types'
-import { stellarAccount, offRampMethods, offRampRates, shortenKey } from '../finance-data'
+import { MOCK_STELLAR_ACCOUNT, TEST_STELLAR_ADDRESS, MOCK_MEMO } from '../fixtures'
+import { formatAddress } from '../helpers/format'
+
+const OFF_RAMP_RATES: Record<CurrencyCode, number> = {
+  NGN: 1580.5,
+  USD: 1,
+  GBP: 0.79,
+  EUR: 0.92,
+}
 
 export class StellarService implements IStellarService {
   getAccountInfo(): StellarAccount {
     return { 
-      ...stellarAccount,
+      ...MOCK_STELLAR_ACCOUNT,
       name: 'Primary Wallet',
-      network: stellarAccount.network || 'Stellar Public Network',
+      network: MOCK_STELLAR_ACCOUNT.network || 'Stellar Public Network',
       isFunded: true
     }
   }
 
   generateReceiveAddress(): string {
-    // In production, this would generate a new receive address
-    // For now, return the mock testnet address
-    return stellarAccount.publicKey
+    return TEST_STELLAR_ADDRESS
   }
 
   validateAddress(address: string): boolean {
@@ -29,7 +35,7 @@ export class StellarService implements IStellarService {
   }
 
   shortenKey(key: string, lead = 6, tail = 6): string {
-    return shortenKey(key, lead, tail)
+    return formatAddress(key, lead, tail)
   }
 
   getOffRampMethods(): OffRampMethod[] {
@@ -68,7 +74,7 @@ export class StellarService implements IStellarService {
   }
 
   getOffRampRate(currency: CurrencyCode): number {
-    const rate = offRampRates[currency]
+    const rate = OFF_RAMP_RATES[currency]
     if (!rate) {
       throw new StellarServiceError(`Off-ramp rate not available for ${currency}`)
     }

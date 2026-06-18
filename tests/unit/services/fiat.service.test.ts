@@ -1,5 +1,5 @@
 import { FiatService } from '../../../lib/services/fiat.service'
-import { StellarServiceError } from '../../../lib/types'
+import { FiatServiceError } from '../../../lib/types'
 
 describe('FiatService', () => {
   let service: FiatService
@@ -41,7 +41,7 @@ describe('FiatService', () => {
 
     it('should throw error for invalid conversion', () => {
       expect(() => service.convertCurrency('INVALID' as any, 'USD', 100))
-        .toThrow(StellarServiceError)
+        .toThrow(FiatServiceError)
     })
   })
 

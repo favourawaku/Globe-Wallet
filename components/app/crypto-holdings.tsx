@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { useBalances } from "@/hooks/useBalances"
-import { formatCrypto } from "@/lib/finance-data"
+import { formatCryptoAmount } from "@/lib/helpers/format"
 import type { AssetCode } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -76,7 +76,7 @@ export function CryptoHoldings() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-foreground">
-                    {formatCrypto(asset.balance, asset.code, hidden)}
+                    {formatCryptoAmount(asset.balance, asset.code, hidden)}
                   </p>
                   <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                     <span>${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>

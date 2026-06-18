@@ -3,6 +3,7 @@ import { TransactionList } from '../../components/app/transaction-list'
 import { FinanceServicesProvider } from '../../hooks/useFinanceServices'
 import { FinanceServiceContainer } from '../../lib/services/container'
 import { Transaction } from '../../lib/types'
+import React from 'react'
 
 const mockTransactions: Transaction[] = [
   {
@@ -33,7 +34,7 @@ const mockWallet = {
 const mockFiat = {
   getAccountBalance: jest.fn().mockReturnValue(0),
   getWallets: jest.fn().mockReturnValue([]),
-  formatMoney: jest.fn().mockReturnValue('₦75,000.00'),
+  formatMoney: jest.fn().mockReturnValue('75,000 NGN'),
   convertCurrency: jest.fn(),
 }
 
@@ -69,7 +70,10 @@ describe('App TransactionList', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Recent transactions')).toBeInTheDocument()
+      expect(screen.getByTestId('transaction-list')).toBeInTheDocument()
     })
+
+    expect(screen.getByRole('list')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
   })
 })

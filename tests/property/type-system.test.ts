@@ -5,7 +5,7 @@ import { FiatService } from '../../lib/services/fiat.service'
 import { StellarService } from '../../lib/services/stellar.service'
 import { AssetCode, CurrencyCode } from '../../lib/types'
 import { FinanceServiceContainer } from '../../lib/services/container'
-import { TEST_STELLAR_ADDRESS } from '../../lib/finance-data'
+import { TEST_STELLAR_ADDRESS } from '../../lib/fixtures'
 
 describe('Type System Correctness Properties', () => {
   const walletService = new WalletService()

@@ -1,5 +1,6 @@
 import { IWalletService, StellarAccount, Balance, Transaction, TransactionResult, AssetCode, StellarServiceError, WalletServiceError } from '../types'
-import { stellarAccount, cryptoAssets, shortenKey } from '../finance-data'
+import { MOCK_STELLAR_ACCOUNT, MOCK_CRYPTO_ASSETS, FixtureFactory } from '../fixtures'
+import { formatAddress } from '../helpers/format'
 import { BaseService } from './base.service'
 import { db } from '../db/mock-db'
 
@@ -14,16 +15,16 @@ export class WalletService extends BaseService implements IWalletService {
 
     getAccountInfo(): StellarAccount {
         return {
-            publicKey: stellarAccount.publicKey,
+            publicKey: MOCK_STELLAR_ACCOUNT.publicKey,
             name: 'Primary Wallet',
-            network: stellarAccount.network || 'Stellar Public Network',
+            network: MOCK_STELLAR_ACCOUNT.network || 'Stellar Public Network',
             isFunded: true
         }
     }
 
     async getBalance(): Promise<Balance[]> {
         return this.withPerformanceTracking('getBalance', async () => {
-            return cryptoAssets.map(asset => ({
+            return MOCK_CRYPTO_ASSETS.map(asset => ({
                 asset: asset.code as AssetCode,
                 amount: asset.balance,
                 priceUsd: asset.priceUsd
@@ -77,7 +78,7 @@ export class WalletService extends BaseService implements IWalletService {
     }
 
     generateReceiveAddress(): string {
-        return stellarAccount.publicKey
+        return MOCK_STELLAR_ACCOUNT.publicKey
     }
 
     validateAddress(address: string): boolean {
@@ -94,6 +95,6 @@ export class WalletService extends BaseService implements IWalletService {
     }
 
     shortenKey(key: string, lead = 6, tail = 6): string {
-        return shortenKey(key, lead, tail)
+        return formatAddress(key, lead, tail)
     }
 }

@@ -1,6 +1,6 @@
 import { ContactService } from '../../../lib/services/contact.service'
 import { Contact } from '../../../lib/types'
-import { TEST_STELLAR_ADDRESS } from '../../../lib/finance-data'
+import { TEST_STELLAR_ADDRESS } from '../../../lib/fixtures'
 
 const seed: Contact[] = [
   { id: 'c1', name: 'Adaeze Okoro', handle: '@adaeze', initials: 'AO', address: TEST_STELLAR_ADDRESS },

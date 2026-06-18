@@ -1,13 +1,6 @@
-/**
- * POST /api/wallet/send
- * Issue #18 — Accepts a send-payment payload, validates it, and returns a
- * mocked TransactionResult. In production this would call the Stellar Horizon API.
- *
- * Security: No private keys are accepted or returned by this endpoint.
- */
-
 import { NextRequest, NextResponse } from 'next/server'
 import type { TransactionResult } from '@/lib/types'
+import { TEST_STELLAR_ADDRESS } from '@/lib/fixtures'
 
 interface SendBody {
   destination?: string
@@ -27,7 +20,6 @@ export async function POST(request: NextRequest) {
 
   const { destination, amount, asset } = body
 
-  // Validate required fields
   if (!destination || typeof destination !== 'string') {
     return NextResponse.json(
       { error: 'ERR_INVALID_ADDRESS: destination is required' },
@@ -49,7 +41,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Validate Stellar address format
   const stellarRegex = /^G[A-Z0-9]{55}$/i
   if (!stellarRegex.test(destination)) {
     return NextResponse.json(
@@ -58,7 +49,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Simulate processing delay (non-blocking)
   const hash = `0x${Math.random().toString(16).slice(2, 66)}`
 
   const result: TransactionResult = {

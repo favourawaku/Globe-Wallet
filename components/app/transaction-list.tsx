@@ -10,6 +10,11 @@ import {
   CreditCard,
   Banknote,
   type LucideIcon,
+} from "lucide-react"
+import { useTransactions } from "@/hooks/useTransactions"
+import type { Transaction } from "@/lib/types"
+import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 } from "lucide-react";
 import { transactions, formatMoney } from "@/lib/finance-data";
 import type { Transaction } from "@/lib/types";
@@ -77,6 +82,14 @@ export function TransactionList({ limit }: TransactionListProps) {
     );
   }
 
+  if (!loading && items.length === 0) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground" data-testid="transaction-list-empty">
+        No transactions yet
+      </div>
+    )
+  }
+
   return (
     <ul
       className="divide-y divide-border"
@@ -127,7 +140,7 @@ export function TransactionList({ limit }: TransactionListProps) {
                 )}
               >
                 {isIncoming ? "+" : "-"}
-                {formatMoney(tx.amount, tx.currency || "USD")}
+                {tx.amount} {tx.asset}
               </p>
               <p className="text-[11px] text-muted-foreground">{tx.date}</p>
             </div>

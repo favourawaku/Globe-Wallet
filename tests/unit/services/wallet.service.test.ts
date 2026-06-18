@@ -1,6 +1,6 @@
 import { WalletService } from '../../../lib/services/wallet.service'
 import { StellarServiceError } from '../../../lib/types'
-import { TEST_STELLAR_ADDRESS } from '../../../lib/finance-data'
+import { TEST_STELLAR_ADDRESS } from '../../../lib/fixtures'
 
 describe('WalletService', () => {
     let service: WalletService
