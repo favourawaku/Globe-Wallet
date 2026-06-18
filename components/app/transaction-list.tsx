@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -15,6 +15,12 @@ import { useTransactions } from "@/hooks/useTransactions"
 import type { Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+} from "lucide-react";
+import { transactions, formatMoney } from "@/lib/finance-data";
+import type { Transaction } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useTransactions } from "@/hooks/useTransactions";
 
 const categoryIcon: Record<string, LucideIcon> = {
   transfer: ArrowUpRight,
@@ -26,37 +32,42 @@ const categoryIcon: Record<string, LucideIcon> = {
   payment: ArrowUpRight,
   exchange: ArrowUpRight,
   withdrawal: ArrowUpRight,
-}
+};
 
 interface TransactionListProps {
-  limit?: number
+  limit?: number;
 }
 
 export function TransactionList({ limit }: TransactionListProps) {
-  const { getTransactions, loading } = useTransactions()
-  const [items, setItems] = useState<Transaction[]>([])
+  const { getTransactions, formatTransactionAmount, loading } =
+    useTransactions();
+  const [items, setItems] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     const load = async () => {
       try {
-        const data = await getTransactions()
+        const data = await getTransactions();
         if (!cancelled) {
-          setItems(limit ? data.slice(0, limit) : data)
+          setItems(limit ? data.slice(0, limit) : data);
         }
       } catch {
-        if (!cancelled) setItems([])
+        if (!cancelled) setItems([]);
       }
-    }
-    load()
+    };
+    load();
     return () => {
-      cancelled = true
-    }
-  }, [getTransactions, limit])
+      cancelled = true;
+    };
+  }, [getTransactions, limit]);
 
   if (loading && items.length === 0) {
     return (
-      <ul className="divide-y divide-border" data-testid="transaction-list-loading" aria-busy="true">
+      <ul
+        className="divide-y divide-border"
+        data-testid="transaction-list-loading"
+        aria-busy="true"
+      >
         {Array.from({ length: limit ?? 3 }).map((_, i) => (
           <li key={i} className="flex items-center gap-3 py-3">
             <Skeleton className="h-10 w-10 rounded-full" />
@@ -68,7 +79,7 @@ export function TransactionList({ limit }: TransactionListProps) {
           </li>
         ))}
       </ul>
-    )
+    );
   }
 
   if (!loading && items.length === 0) {
@@ -80,11 +91,21 @@ export function TransactionList({ limit }: TransactionListProps) {
   }
 
   return (
-    <ul className="divide-y divide-border" role="list" data-testid="transaction-list">
+    <ul
+      className="divide-y divide-border"
+      role="list"
+      data-testid="transaction-list"
+    >
       {items.map((tx) => {
-        const isIncoming = (tx.type as string) === "in" || (tx.type as string) === "receive" || (tx.type as string) === "deposit"
-        const Icon = isIncoming ? ArrowDownLeft : (tx.category ? categoryIcon[tx.category] : ArrowUpRight) || ArrowUpRight
-        
+        const isIncoming =
+          (tx.type as string) === "in" ||
+          (tx.type as string) === "receive" ||
+          (tx.type as string) === "deposit";
+        const Icon = isIncoming
+          ? ArrowDownLeft
+          : (tx.category ? categoryIcon[tx.category] : ArrowUpRight) ||
+            ArrowUpRight;
+
         return (
           <li
             key={tx.id}
@@ -95,15 +116,21 @@ export function TransactionList({ limit }: TransactionListProps) {
             <span
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                isIncoming ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground",
+                isIncoming
+                  ? "bg-primary/15 text-primary"
+                  : "bg-secondary text-muted-foreground",
               )}
               aria-hidden
             >
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{tx.name || "Transaction"}</p>
-              <p className="truncate text-xs text-muted-foreground">{tx.detail || tx.address || ""}</p>
+              <p className="truncate text-sm font-medium text-foreground">
+                {tx.name || "Transaction"}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {tx.detail || tx.address || ""}
+              </p>
             </div>
             <div className="text-right">
               <p
@@ -118,8 +145,8 @@ export function TransactionList({ limit }: TransactionListProps) {
               <p className="text-[11px] text-muted-foreground">{tx.date}</p>
             </div>
           </li>
-        )
+        );
       })}
     </ul>
-  )
+  );
 }
