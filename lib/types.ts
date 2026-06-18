@@ -374,6 +374,61 @@ export interface DeveloperProfile {
   advancedMode: boolean;
 }
 
+// ── Off-Ramp Validation Types (Issue #21) ────────────────────────────────────
+
+export type WithdrawalErrorCode =
+  | "INVALID_AMOUNT"
+  | "NO_PAYMENT_METHOD"
+  | "INSUFFICIENT_BALANCE"
+  | "BELOW_MIN_LIMIT"
+  | "ABOVE_MAX_LIMIT"
+  | "METHOD_DISABLED"
+  | "METHOD_NOT_FOUND"
+  | "UNKNOWN_ASSET";
+
+/** Result of validating a withdrawal request. */
+export interface WithdrawalValidationResult {
+  valid: boolean;
+  errorCode?: WithdrawalErrorCode;
+  errorMessage?: string;
+}
+
+/** Full breakdown of a payout calculation. */
+export interface PayoutBreakdown {
+  cryptoAmount: number;
+  asset: string;
+  usdValue: number;
+  feeAmount: number;
+  fixedFee: number;
+  percentFee: number;
+  netPayout: number;
+  paymentMethodId: string;
+}
+
+/** UI-level payment method (as used in the off-ramp page). */
+export interface UIPaymentMethod {
+  id: string;
+  type: "bank" | "card";
+  name: string;
+  details: string;
+  fees: string;
+  processingTime: string;
+  limits: { min: number; max: number };
+  enabled: boolean;
+}
+
+/** State persisted to localStorage for the last withdrawal. */
+export interface PersistedWithdrawal {
+  methodId: string;
+  methodName: string;
+  asset: string;
+  amount: number;
+  fiatAmount: number;
+  status: "completed" | "pending" | "failed";
+  hash?: string;
+  date: string;
+}
+
 // ── Container Interface ──────────────────────────────────────────────────────
 
 export interface IFinanceServiceContainer {

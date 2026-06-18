@@ -53,6 +53,9 @@ jobs:
     - name: Run E2E tests (issue #14 mock centralization)
       run: npm run test:e2e -- --grep "Issue #14"
 
+    - name: Run E2E tests (issue #21 payout validation)
+      run: npm run test:e2e -- --grep "Issue #21"
+
     - name: Run full E2E suite
       run: npm run test:e2e
 
@@ -83,7 +86,7 @@ jobs:
             "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "author": "${{ github.actor }}",
             "issue": 14,
-            "issues": [14, 23, 25, 28, 30],
+            "issues": [14, 21, 23, 25, 28, 30],
             "status": "success",
             "coverage_verified": true,
             "fixture_coverage_verified": true
