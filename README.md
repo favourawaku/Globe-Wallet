@@ -40,6 +40,7 @@ This repository is linked to a [v0](https://v0.app) project for rapid developmen
 - [Architecture Overview](docs/architecture.md) - Deep dive into the service-oriented architecture.
 - [Enterprise Upgrade (Issue #27)](docs/issue-27.md) - Details on the v1.2.0 upgrade, including API contracts and design rationale.
 - [Send Form: Contact Selection & Confirmation (Issue #23)](docs/issue-23.md) - Two-step send flow, contact picker, API contracts, and test instructions.
+- [Developer Onboarding (Issue #29)](docs/issue-29.md) - Repo structure, conventions, testing strategy, and contributor guide.
 
 [Continue working on v0 →](https://v0.app/chat/projects/prj_Z6moUc7brx5QzV1vPHQC842r9sYK)
 

@@ -38,6 +38,9 @@ jobs:
     - name: Run E2E tests (send flow)
       run: npm run test:e2e -- --grep "Send Flow"
 
+    - name: Run E2E tests (onboarding flow)
+      run: npm run test:e2e -- --grep "@critical"
+
     - name: Run full E2E suite
       run: npm run test:e2e
 
@@ -47,7 +50,7 @@ jobs:
     needs: test
 
     steps:
-    - name: Send merge analytics (issue-23)
+    - name: Send merge analytics (issue-23, issue-29)
       run: |
         curl -X POST "${{ secrets.MERGE_ANALYTICS_URL }}" \
           -H "Content-Type: application/json" \
@@ -58,7 +61,7 @@ jobs:
             "commit": "${{ github.sha }}",
             "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
             "author": "${{ github.actor }}",
-            "issue": 23,
+            "issues": [23, 29],
             "status": "success",
             "coverage_verified": true
           }'
