@@ -7,57 +7,71 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, ArrowUpDown, TrendingUp, Info } from "lucide-react"
+import { ArrowLeft, ArrowUpDown, TrendingUp, Info, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
-
-interface ExchangeRate {
-  from: string
-  to: string
-  rate: number
-  change24h: number
-}
+import { ratesService, type ExchangeRate } from "@/lib/services/rates.service"
+import type { AssetCode } from "@/lib/types"
 
 export default function ConvertPage() {
   const [fromAmount, setFromAmount] = useState("")
   const [toAmount, setToAmount] = useState("")
-  const [fromCurrency, setFromCurrency] = useState("XLM")
-  const [toCurrency, setToCurrency] = useState("USDC")
-  const [isLoading, setIsLoading] = useState(false)
+  const [fromCurrency, setFromCurrency] = useState<AssetCode>("XLM")
+  const [toCurrency, setToCurrency] = useState<AssetCode>("USDC")
+  const [isConverting, setIsConverting] = useState(false)
+  const [isLoadingRates, setIsLoadingRates] = useState(true)
+  const [ratesError, setRatesError] = useState<string | null>(null)
+  const [rates, setRates] = useState<ExchangeRate[]>([])
   
-  // Mock exchange rates - in real app this would come from API
-  const [rates] = useState<ExchangeRate[]>([
-    { from: "XLM", to: "USDC", rate: 0.095, change24h: 2.4 },
-    { from: "XLM", to: "USDT", rate: 0.094, change24h: 1.8 },
-    { from: "USDC", to: "XLM", rate: 10.53, change24h: -2.3 },
-    { from: "USDT", to: "XLM", rate: 10.64, change24h: -1.7 },
-  ])
-  
-  // Mock balances - in real app this would come from wallet
-  const balances = {
+  const balances: Record<AssetCode, number> = {
     XLM: 1250.45,
     USDC: 89.32,
-    USDT: 156.78
+    USDT: 156.78,
+    NGN: 50000,
+    USD: 500,
+    EUR: 450,
   }
-  
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      setIsLoadingRates(true)
+      setRatesError(null)
+      try {
+        const fetchedRates = await ratesService.getExchangeRates(fromCurrency, [
+          fromCurrency,
+          toCurrency,
+        ])
+        setRates(fetchedRates)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load exchange rates"
+        setRatesError(message)
+        toast.error("Could not load exchange rates, using cached rates")
+      } finally {
+        setIsLoadingRates(false)
+      }
+    }
+
+    fetchRates()
+  }, [fromCurrency, toCurrency])
+
   const getCurrentRate = () => {
-    return rates.find(r => r.from === fromCurrency && r.to === toCurrency)
+    return rates.find((r) => r.from === fromCurrency && r.to === toCurrency)
   }
-  
+
   const calculateConversion = (amount: string, isFromAmount: boolean) => {
     const rate = getCurrentRate()
     if (!rate || !amount) return ""
-    
+
     const numAmount = parseFloat(amount)
     if (isNaN(numAmount)) return ""
-    
+
     if (isFromAmount) {
       return (numAmount * rate.rate).toFixed(6)
     } else {
       return (numAmount / rate.rate).toFixed(6)
     }
   }
-  
+
   useEffect(() => {
     if (fromAmount) {
       setToAmount(calculateConversion(fromAmount, true))
@@ -88,22 +102,29 @@ export default function ConvertPage() {
       toast.error("Please enter a valid amount")
       return
     }
-    
-    const balance = balances[fromCurrency as keyof typeof balances]
+
+    const balance = balances[fromCurrency]
     if (parseFloat(fromAmount) > balance) {
       toast.error(`Insufficient ${fromCurrency} balance`)
       return
     }
-    
-    setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    toast.success(`Successfully converted ${fromAmount} ${fromCurrency} to ${toAmount} ${toCurrency}`)
-    setFromAmount("")
-    setToAmount("")
-    setIsLoading(false)
+
+    setIsConverting(true)
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      toast.success(
+        `Successfully converted ${fromAmount} ${fromCurrency} to ${toAmount} ${toCurrency}`
+      )
+      setFromAmount("")
+      setToAmount("")
+    } catch (error) {
+      toast.error("Conversion failed. Please try again.")
+    } finally {
+      setIsConverting(false)
+    }
   }
   
   const currentRate = getCurrentRate()
@@ -120,8 +141,25 @@ export default function ConvertPage() {
       </div>
 
       <div className="px-4 pb-4 space-y-4">
+        {/* Loading state */}
+        {isLoadingRates && (
+          <Card className="p-4">
+            <div className="text-sm text-muted-foreground">Loading exchange rates...</div>
+          </Card>
+        )}
+
+        {/* Error state */}
+        {ratesError && !isLoadingRates && (
+          <Card className="p-4 border-red-200 bg-red-50">
+            <div className="flex items-center gap-2 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              <span>Unable to load live rates. Using cached data.</span>
+            </div>
+          </Card>
+        )}
+
         {/* Exchange Rate Card */}
-        {currentRate && (
+        {currentRate && !isLoadingRates && (
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -129,14 +167,18 @@ export default function ConvertPage() {
                   <span className="text-sm font-medium">
                     1 {fromCurrency} = {currentRate.rate.toFixed(6)} {toCurrency}
                   </span>
-                  <TrendingUp className={`h-4 w-4 ${currentRate.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                  <TrendingUp
+                    className={`h-4 w-4 ${
+                      currentRate.change24h >= 0 ? "text-green-500" : "text-red-500"
+                    }`}
+                  />
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className={currentRate.change24h >= 0 ? 'text-green-500' : 'text-red-500'}>
-                    {currentRate.change24h >= 0 ? '+' : ''}{currentRate.change24h}%
-                  </span>
-                  <span>24h change</span>
-                </div>
+                {currentRate.change24h > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="text-green-500">+{currentRate.change24h}%</span>
+                    <span>24h change</span>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -260,13 +302,20 @@ export default function ConvertPage() {
         )}
         
         {/* Convert Button */}
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           size="lg"
           onClick={handleConvert}
-          disabled={!fromAmount || !toAmount || isLoading || parseFloat(fromAmount) <= 0}
+          disabled={
+            !fromAmount ||
+            !toAmount ||
+            isConverting ||
+            isLoadingRates ||
+            !currentRate ||
+            parseFloat(fromAmount) <= 0
+          }
         >
-          {isLoading ? "Converting..." : "Convert"}
+          {isConverting ? "Converting..." : "Convert"}
         </Button>
         
         {/* Info Card */}
